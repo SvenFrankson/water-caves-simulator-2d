@@ -11,6 +11,7 @@ export class Game {
     constructor(canvas: HTMLCanvasElement) {
         this.engine = new Engine(canvas, true)
         this.scene = new Scene(this.engine);
+        this.scene.clearColor.set(0, 0, 0, 1);
         this.camera = new MyCamera(this);
 
         window.addEventListener("resize", () => {

@@ -39,24 +39,22 @@ export class WaterCell {
             return;
         }
         
-        if (this.fillLevel < 1) {
-            this.pressure = this.fillLevel / 10;
-        }
+        this.pressure = this.fillLevel / 1;
         this.flowDirection.scaleInPlace(0.9);
 
         let aboveCell = this.waterEngine.getCell(this.x, this.y + 1);
         if (aboveCell && !aboveCell.isSolid) {
-            this.pressure = this.fillLevel / 10 + aboveCell.pressure;
-        }
-
-        let rightCell = this.waterEngine.getCell(this.x + 1, this.y);
-        if (rightCell && !rightCell.isSolid) {
-            this.pressure = this.pressure * 0.9 + rightCell.pressure * 0.1;
+            this.pressure = this.pressure + aboveCell.pressure;
         }
 
         let leftCell = this.waterEngine.getCell(this.x - 1, this.y);
         if (leftCell && !leftCell.isSolid) {
-            this.pressure = this.pressure * 0.9 + leftCell.pressure * 0.1;
+            this.pressure = this.pressure * 0.5 + leftCell.pressure * 0.5;
+        }
+
+        let rightCell = this.waterEngine.getCell(this.x + 1, this.y);
+        if (rightCell && !rightCell.isSolid) {
+            this.pressure = this.pressure * 0.5 + rightCell.pressure * 0.5;
         }
 
         let belowCell = this.waterEngine.getCell(this.x, this.y - 1);
@@ -73,21 +71,21 @@ export class WaterCell {
             belowCell.fillLevel += transfer;
         }
 
-        let belowIsFilledOrSolid = !belowCell || belowCell.isSolid || belowCell.fillLevel >= 0.5;
+        let belowIsFilledOrSolid = !belowCell || belowCell.isSolid || belowCell.fillLevel >= 0.6;
 
         if (leftCell && !leftCell.isSolid && belowIsFilledOrSolid) {
-            if (leftCell.pressure < this.pressure && this.fillLevel > leftCell.fillLevel * 0.9) {
-                let transfer = (this.pressure - leftCell.pressure) * 3;
-                transfer = Math.min(transfer, (this.fillLevel - leftCell.fillLevel * 0.9) / 2);
+            if (leftCell.pressure < this.pressure && this.fillLevel > leftCell.fillLevel * 0.6) {
+                let transfer = (this.pressure - leftCell.pressure);
+                transfer = Math.min(transfer, (this.fillLevel - leftCell.fillLevel * 0.6) / 2);
                 this.fillLevel -= transfer;
                 leftCell.fillLevel += transfer;
                 this.flowDirection.x -= transfer;
             }
         }
         if (rightCell && !rightCell.isSolid && belowIsFilledOrSolid) {
-            if (rightCell.pressure < this.pressure && this.fillLevel > rightCell.fillLevel * 0.9) {
-                let transfer = (this.pressure - rightCell.pressure) * 3;
-                transfer = Math.min(transfer, (this.fillLevel - rightCell.fillLevel * 0.9) / 2);
+            if (rightCell.pressure < this.pressure && this.fillLevel > rightCell.fillLevel * 0.6) {
+                let transfer = (this.pressure - rightCell.pressure);
+                transfer = Math.min(transfer, (this.fillLevel - rightCell.fillLevel * 0.6) / 2);
                 this.fillLevel -= transfer;
                 rightCell.fillLevel += transfer;
                 this.flowDirection.x += transfer;
@@ -96,7 +94,7 @@ export class WaterCell {
         
         if (this.fillLevel > 1) {
             let overflow = this.fillLevel - 1;
-            let adjacentCells = [aboveCell, rightCell, leftCell].filter(c => c && !c.isSolid) as WaterCell[];
+            let adjacentCells = [aboveCell, rightCell, leftCell, belowCell].filter(c => c && !c.isSolid) as WaterCell[];
             let transfer = overflow / adjacentCells.length;
             this.fillLevel = 1;
             for (let cell of adjacentCells) {
@@ -107,6 +105,8 @@ export class WaterCell {
                     this.flowDirection.x -= transfer;
                 } else if (cell === rightCell) {
                     this.flowDirection.x += transfer;
+                } else if (cell === belowCell) {
+                    this.flowDirection.y -= transfer;
                 }
             }
         }
@@ -131,16 +131,16 @@ export class WaterCell {
 
         for (let i = 0; i < 3; i++) {
             let bottom = neighbours[i][0];
-            if (bottom && (bottom.isSolid || bottom.fillLevel > 0.8)) {
+            if (bottom && (bottom.isSolid || bottom.fillLevel > 0.9)) {
                 this.emptyAnchor.y -= 0.5;
             }
         }
         let left = neighbours[0][1];
-        if (left && (left.isSolid || left.fillLevel > 0.8)) {
+        if (left && (left.isSolid || left.fillLevel > 0.9)) {
             this.emptyAnchor.x -= 0.5;
         }
         let right = neighbours[2][1];
-        if (right && (right.isSolid || right.fillLevel > 0.8)) {
+        if (right && (right.isSolid || right.fillLevel > 0.9)) {
             this.emptyAnchor.x += 0.5;
         }
 

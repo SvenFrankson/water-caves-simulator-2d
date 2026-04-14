@@ -8,7 +8,7 @@ export class Game {
     public scene: Scene;
     public camera: MyCamera;
 
-    constructor(canvas: HTMLCanvasElement) {
+    constructor(public canvas: HTMLCanvasElement) {
         this.engine = new Engine(canvas, true)
         this.scene = new Scene(this.engine);
         this.scene.clearColor.set(0, 0, 0, 1);

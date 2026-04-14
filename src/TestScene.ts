@@ -4,6 +4,7 @@ import { WaterCell } from "./map/WaterCell";
 import { WaterEngine } from "./map/WaterEngine";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core";
+import { MapEditInput } from "./MapEditInput";
 
 export class TestScene {
 
@@ -11,144 +12,50 @@ export class TestScene {
 
         const light = new HemisphericLight("light", new Vector3(0, 1, 0), game.scene);
         light.intensity = 1;
-        light.groundColor = new Color3(0.5, 0.5, 0.5);
+        light.groundColor = new Color3(0.1, 0.1, 0.1);
 
-        const layout = 
-            `111111111111111111111111111111111111111111111111111111111111
-111111111111111111111111111111111111111111111111111111111111
-111111111111111111111111111111111111111111111111111111111111
-111111111111111111111111111111111111111111111111111111111111
-111111110111111111111111111111111111111111111111111111111111
-111110000000111111110111111111111101111111111111111111111111
-111100000000011110000000111111000000000111111111101111111111
-111100000000000000000000011100000000000001111100000001111111
-111000000000000000000000000000000000000000000000000000111111
-111100000000000000000000000000000000000000000000000000011111
-111100000000000000000000000000000000000000000000000000011111
-111110000000000000000000000000000000000000000000000000001111
-111111110000000000000000000000000000000111100000000000011111
-111111111110000100000000010000011101111111100000000000011111
-111111111110001110000000111000111111111111100000000000111111
-111111111110001111110111111000111111111111100000000001111111
-111111111110001111111111111000111111111111100001101111111111
-111111111100000111111111110000011111111111100011111111111111
-111111110000000001111111100000001111111111100011111111111111
-111111100000000000111111000000000111111111000001111111111111
-111111000000000000011110000000000011111100000000011111111111
-111111000000000000000000000000000001110000000000000111111111
-111110000000000000000000000000000000000000000000000011111111
-111111000000000000000000000000000000000000000000000011111111
-111111000000000000000000000000000000000000000000000001111111
-111111000000000000100000000000000000000000000000000011111111
-111111000000000001110000000000000000000000000000000011111111
-111111000011011111110000000000000000000000000000000011111111
-111111000111111111110000100000001000001100000000000011111111
-111111000111111111110001111101111100011111110111000011111111
-111111000111111111110001111111111100011111111111100011111111
-111110000011111111110001111111111100011111111111100011111111
-111100000001111111100000111111111100011111111111000001111111
-111000000000111110000000001111111000001111111100000000011111
-111000000000011100000000000111110000000111111000000000001111
-111000000000000000000000000011100000000011110000000000000111
-110000000000000000000000000000000000000001110000000000000111
-111000000000000000000000000000000000000000000000000000000011
-111000000000000000000000000000000000000000000000000000000111
-111000000000000000000000000000000000000000000000000000000111
-111100000001000000000000000110000000000000000000000000001111
-111110000011100000000000001111000000000000111100000000011111
-111111101111100001111011111111000000000001111110000111111111
-111111111111100011111111111111000000000011111110001111111111
-111111111111100011111111111110000000000111111110001111111111
-111111111111000001111111111100000000001111111110001111111111
-111111111110000000111111110000000000011111111100000111111111
-111111111100000000011111100000000000001111111000000011111111
-111111111000000000001111000000000000000111110000000001111111
-111111111000000000000000000000000000000000000000000000111111
-111111110000000000000000000000000000000000000000000000111111
-111111111000000000000000000000000000000000000000000000011111
-111111111000000000001111000000000000000111000000000000111111
-111111111100000000011111100000000000001111100000000000111111
-111111111110000000111111110000000000011111110000000001111111
-111111111111110111111111111100000001111111111000000011111111
-111111111111111111111111111111101111111111111111011111111111
-111111111111111111111111111111111111111111111111111111111111
-111111111111111111111111111111111111111111111111111111111111
-111111111111111111111111111111111111111111111111111111111111
-
-`;
-
-        let waterEngine = new WaterEngine(60, 60);
-        /*
+        let waterEngine = new WaterEngine(40, 40, this.game);
         for (let i = 0; i < waterEngine.width; i++) {
             for (let j = 0; j < waterEngine.height; j++) {
                 let cell = new WaterCell(waterEngine, i, j);
                 if (i === 0 || i === waterEngine.width - 1 || j === 0 || j === waterEngine.height - 1) {
                     cell.isSolid = true;
+                    cell.fillLevel = 1;
                 }
                 if (i === 10 && j > 2) {
                     cell.isSolid = true;
+                    cell.fillLevel = 1;
                 }
                 if (j === 20 && i < 7) {
                     cell.isSolid = true;
+                    cell.fillLevel = 1;
                 }
                 if (j === 30 && i < 7) {
                     cell.isSolid = true;
+                    cell.fillLevel = 1;
                 }
                 if (j === 15 && i > 3 && i < 10) {
                     cell.isSolid = true;
+                    cell.fillLevel = 1;
                 }
                 if (j === 25 && i > 3 && i < 10) {
                     cell.isSolid = true;
+                    cell.fillLevel = 1;
                 }
                 if (i === 15 && j < 7) {
                     cell.isSolid = true;
+                    cell.fillLevel = 1;
                 }
                 if (i === 29 && j < 15) {
                     cell.isSolid = true;
-                }
-                if (!cell.isSolid && i < 10) {
-                    cell.fillLevel = Math.random();
-                }
-            }
-        }
-        */
-        let layoutSplit = layout.split("\n").map(line => line.trim());
-        for (let j = 0; j < waterEngine.height; j++) {
-            for (let i = 0; i < waterEngine.width; i++) {
-                let cell = new WaterCell(waterEngine, i, j);
-                if (layoutSplit[j][i] === "1") {
-                    cell.isSolid = true;
-                } else {
-                    cell.fillLevel = 0.01;
-                }
-            }
-        }
-        
-        for (let i = 0; i < waterEngine.width; i++) {
-            for (let j = 0; j < waterEngine.height; j++) {
-                let cell = waterEngine.getCell(i, j);
-                if (cell && !cell.isSolid) {
-                    let cellBelow = waterEngine.getCell(i, j - 1);
-                    if (cellBelow && cellBelow.isSolid) {
-                        cell.emptyAnchor.set(i, j - 0.5);
-                    }
-                }
-            }
-        }
-
-        
-        for (let j = 0; j < waterEngine.height; j++) {
-            for (let i = 0; i < waterEngine.width; i++) {
-                let cell = new WaterCell(waterEngine, i, j);
-                if (layoutSplit[j][i] === "1") {
-                    cell.isSolid = true;
                     cell.fillLevel = 1;
-                } else {
-                    cell.fillLevel = 0.01;
+                }
+                if (!cell.isSolid && i < 5) {
+                    cell.fillLevel = Math.random() * 0.5 + 0.5;
                 }
             }
         }
-
+        
         waterEngine.neighbourize();
 
         game.camera.target.copyFromFloats(waterEngine.width / 2, waterEngine.height / 2, 0);
@@ -156,7 +63,16 @@ export class TestScene {
         game.camera.alpha = - Math.PI * 0.5;
         game.camera.beta = Math.PI * 0.5;
 
+        waterEngine.instantiateMesh();
+
+        waterEngine.initializeRockGenerator().then(() => {
+            waterEngine.redrawRocks();
+        });
+
         waterEngine.redraw();
+
+        let mapEditInput = new MapEditInput(game, waterEngine);
+        mapEditInput.connect();
 
         game.scene.registerBeforeRender(() => {
             waterEngine.update();
@@ -165,22 +81,11 @@ export class TestScene {
         });
 
         setInterval(() => {
-            let x = Math.floor(Math.random() * 55);
-            let cell = waterEngine.getCell(x + 1, 50);
+            let x = Math.floor(Math.random() * waterEngine.width);
+            let y = Math.floor(0.8 * waterEngine.height + Math.random() * 0.2 * waterEngine.height);
+            let cell = waterEngine.getCell(x, y);
             if (cell && !cell.isSolid) {
                 cell.fillLevel = 1;
-            }
-            let cell2 = waterEngine.getCell(x + 2, 50);
-            if (cell2 && !cell2.isSolid) {
-                cell2.fillLevel = 1;
-            }
-            let cell3 = waterEngine.getCell(x + 1, 49);
-            if (cell3 && !cell3.isSolid) {
-                cell3.fillLevel = 1;
-            }
-            let cell4 = waterEngine.getCell(x + 2, 49);
-            if (cell4 && !cell4.isSolid) {
-                cell4.fillLevel = 1;
             }
 
         }, 500);

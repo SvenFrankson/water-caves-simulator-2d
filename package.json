@@ -13,8 +13,9 @@
     "vite": "^8.0.4"
   },
   "dependencies": {
-    "@babylonjs/core": "^9.2.0",
+    "@babylonjs/core": "^9.2.1",
     "@babylonjs/inspector": "^9.2.0",
-    "@babylonjs/loaders": "^9.2.0"
+    "@babylonjs/loaders": "^9.2.1",
+    "babylonjs": "^9.2.1"
   }
 }

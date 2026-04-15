@@ -1,14 +1,20 @@
-import { CreateBoxVertexData, Mesh, MeshBuilder, StandardMaterial, Vector2, Vector3, VertexData } from "@babylonjs/core";
+import { Vector2, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { WaterCell } from "./WaterCell";
-import { EaseOutCirc, EaseOutSine } from "../Easing";
+import { EaseOutCirc } from "../Easing";
 import { RockGenerator } from "./RockGenerator";
 import type { Game } from "../Game";
+import { MergeVertexDatas } from "../VertexDataUtils";
 
 export class WaterEngineVertex {
 
     public position: Vector3 = Vector3.Zero();
     public connections: WaterEngineVertex[] = [];
     public visibility: number = 0.5;
+    public pressure: number = 0.5;
 
     constructor(public x: number, public y: number) {
         this.position.set(x, y, 0);
@@ -50,9 +56,10 @@ export class WaterEngine {
     public rockMaterial: StandardMaterial;
     public frameMaterial: StandardMaterial;
     public waterMaterial: StandardMaterial;
-    public testMeshes?: Mesh[][] = [];
+    
     public lineMesh?: Mesh;
     public rockMesh?: Mesh;
+    public waterMesh?: Mesh;
 
     public vertices: WaterEngineVertex[][] = [];
     public threshold: number = 0.0001;
@@ -68,7 +75,34 @@ export class WaterEngine {
         this.frameMaterial.diffuseColor.set(0.1, 0.1, 0.1);
 
         this.waterMaterial = new StandardMaterial("water-material");
-        this.waterMaterial.diffuseColor.set(0, 0, 1);
+        this.waterMaterial.diffuseColor.set(1, 1, 1);
+        this.waterMaterial.specularColor.set(0.1, 0.1, 0.1);
+
+        this.frame = MeshBuilder.CreateBox("frame", { width: 1, height: 1, depth: 1 });
+        this.frame.material = this.frameMaterial;
+
+        this.setWidthAndHeight(width, height);
+
+        this.rockMesh = new Mesh("rock-mesh");
+        this.rockMesh.material = this.rockMaterial;
+
+        this.waterMesh = new Mesh("water-mesh");
+        this.waterMesh.hasVertexAlpha = true;
+        this.waterMesh.material = this.waterMaterial;
+        
+        this.rockGenerator = new RockGenerator(this, this.game);
+    }
+
+    public dispose(): void {
+        this.frame.dispose();
+    }
+
+    public setWidthAndHeight(width: number, height: number): void {
+        this.width = width;
+        this.height = height;
+
+        this.frame.position.set(this.width / 2 - 0.5, this.height / 2 - 0.5, 0.5 + 0.6);
+        this.frame.scaling.set(this.width, this.height, 1);
 
         this.vertices = [];
         for (let i = 0; i <= this.width; i++) {
@@ -77,15 +111,6 @@ export class WaterEngine {
                 this.vertices[i][j] = new WaterEngineVertex(i - 0.5, j - 0.5);
             }
         }
-
-        this.frame = MeshBuilder.CreateBox("frame", { width: this.width, height: this.height, depth: 1 });
-        this.frame.material = this.frameMaterial;
-        this.frame.position.set(this.width / 2 - 0.5, this.height / 2 - 0.5, 0.5 + 0.6);
-
-        this.rockMesh = new Mesh("rock-mesh");
-        this.rockMesh.material = this.rockMaterial;
-        
-        this.rockGenerator = new RockGenerator(this, this.game);
     }
 
     public async initializeRockGenerator(): Promise<void> {   
@@ -96,40 +121,6 @@ export class WaterEngine {
         if (this.rockGenerator.initialized) {
             let vertexData = this.rockGenerator.generateRockVertexData();
             vertexData.applyToMesh(this.rockMesh!);
-        }
-    }
-
-    public instantiateMesh(): void {
-        this.testMeshes = [];
-        for (let i = 0; i < this.width; i++) {
-            this.testMeshes[i] = [];
-            for (let j = 0; j < this.height; j++) {
-                this.redrawCell(i, j);
-            }
-        }
-    }
-
-    public redrawCell(i: number, j: number): void {
-        let cell = this.getCell(i, j);
-        if (cell) {
-            let cellMesh = new Mesh("cell-" + i + "-" + j);
-            if (cell.isSolid) {
-                
-            }
-            else {
-                cellMesh.position.set(0, 0, 0);
-                cellMesh.material = this.waterMaterial;
-            }
-            if (!this.testMeshes) {
-                this.testMeshes = [];
-            }
-            if (!this.testMeshes[i]) {
-                this.testMeshes[i] = [];
-            }
-            if (this.testMeshes[i][j]) {
-                this.testMeshes[i][j].dispose();
-            }
-            this.testMeshes[i][j] = cellMesh;
         }
     }
 
@@ -163,36 +154,7 @@ export class WaterEngine {
 
     private _pts: Vector3[] = [Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero()];
     private _visibilities: number[] = [0, 0, 0, 0];
-
-    public mapRedraw() {
-        for (let i = 0; i < this.width; i++) {
-            for (let j = 0; j < this.height; j++) {
-                let cell = this.getCell(i, j);
-                if (cell && cell.isSolid) {
-                    let cellMesh = this.testMeshes?.[i]?.[j];
-                    if (cellMesh) {
-                        cellMesh.dispose();
-                        cellMesh = undefined;
-                    }
-                    if (!cellMesh) {
-                        cellMesh = new Mesh("cell-" + i + "-" + j);
-                        cellMesh.position.set(i, j, 0);
-                        if (!this.testMeshes) {
-                            this.testMeshes = [];
-                        }
-                        if (!this.testMeshes[i]) {
-                            this.testMeshes[i] = [];
-                        }
-                        this.testMeshes[i][j] = cellMesh;
-                    }
-                    CreateBoxVertexData({ width: 1, height: 1, depth: 1.2 }).applyToMesh(cellMesh);
-                    cellMesh.position.set(i, j, 0);
-                    cellMesh.material = this.rockMaterial;
-                    cellMesh.isVisible = true;
-                }
-            }
-        }
-    }
+    private _pressures: number[] = [0, 0, 0, 0];
 
     public redraw() {
         this.updateVertices();
@@ -215,6 +177,16 @@ export class WaterEngine {
                                 this.vertices[cell.x][cell.y + 1].visibility += visibility * 0.1;
                                 this.vertices[cell.x + 1][cell.y + 1].visibility *= 0.9;
                                 this.vertices[cell.x + 1][cell.y + 1].visibility += visibility * 0.1;
+
+                                let pressure = cell.pressure;
+                                this.vertices[cell.x][cell.y].pressure *= 0.9;
+                                this.vertices[cell.x][cell.y].pressure += pressure * 0.1;
+                                this.vertices[cell.x + 1][cell.y].pressure *= 0.9;
+                                this.vertices[cell.x + 1][cell.y].pressure += pressure * 0.1;
+                                this.vertices[cell.x][cell.y + 1].pressure *= 0.9;
+                                this.vertices[cell.x][cell.y + 1].pressure += pressure * 0.1;
+                                this.vertices[cell.x + 1][cell.y + 1].pressure *= 0.9;
+                                this.vertices[cell.x + 1][cell.y + 1].pressure += pressure * 0.1;
                             }
                         }
                     }
@@ -222,33 +194,18 @@ export class WaterEngine {
             }
         }
 
+        let vertexDataParts: VertexData[] = [];
         for (let i = 0; i < this.cells.length; i++) {
             const column = this.cells[i];
             if (column) {
                 for (let j = 0; j < column.length; j++) {
                     const cell = column[j];
                     if (cell) {
-                        let cellMesh = this.testMeshes?.[i]?.[j];
-                        if (cellMesh && !cell.isSolid) {
+                        if (!cell.isSolid) {
                             if (cell.fillLevel < this.threshold) {
-                                cellMesh.isVisible = false;
+                                
                             }
                             else {
-                                cellMesh.isVisible = true;
-                                cellMesh.scaling.x = 1;
-                                cellMesh.scaling.y = 1;
-                                cellMesh.scaling.z = 1;
-                                cellMesh.position.x = 0;
-                                cellMesh.position.y = 0;
-                                cellMesh.position.z = 0;
-                                cellMesh.hasVertexAlpha = true;
-                                if (cellMesh.hasVertexAlpha) {
-                                    cellMesh.visibility = 1;
-                                }
-                                else {
-                                    cellMesh.visibility = 0.5;
-                                }
-
                                 let pts = this._pts;
                                 pts[0].copyFrom(this.vertices[cell.x][cell.y].position);
                                 pts[1].copyFrom(this.vertices[cell.x + 1][cell.y].position);
@@ -264,6 +221,16 @@ export class WaterEngine {
                                 visibilities[1] = this.vertices[cell.x + 1][cell.y].visibility;
                                 visibilities[2] = this.vertices[cell.x + 1][cell.y + 1].visibility;
                                 visibilities[3] = this.vertices[cell.x][cell.y + 1].visibility;
+                                
+                                let pressures = this._pressures;
+                                pressures[0] = this.vertices[cell.x][cell.y].pressure / 5;
+                                pressures[0] = Math.max(Math.min(pressures[0], 1), 0);
+                                pressures[1] = this.vertices[cell.x + 1][cell.y].pressure / 5;
+                                pressures[1] = Math.max(Math.min(pressures[1], 1), 0);
+                                pressures[2] = this.vertices[cell.x + 1][cell.y + 1].pressure / 5;
+                                pressures[2] = Math.max(Math.min(pressures[2], 1), 0);
+                                pressures[3] = this.vertices[cell.x][cell.y + 1].pressure / 5;
+                                pressures[3] = Math.max(Math.min(pressures[3], 1), 0);
                                 
                                 pts[0].z = - visibilities[0] * 0.5;
                                 pts[1].z = - visibilities[1] * 0.5;
@@ -291,30 +258,29 @@ export class WaterEngine {
                                     4, 5, 6, 4, 6, 7
                                 ];
 
-                                if (cellMesh.hasVertexAlpha) {
-                                    vertexData.colors = [
-                                        1 - visibilities[0], 1, 1, visibilities[0],
-                                        1 - visibilities[1], 1, 1, visibilities[1],
-                                        1 - visibilities[2], 1, 1, visibilities[2],
-                                        1 - visibilities[3], 1, 1, visibilities[3],
-                                        1 - visibilities[0], 1, 1, visibilities[0],
-                                        1 - visibilities[1], 1, 1, visibilities[1],
-                                        1 - visibilities[2], 1, 1, visibilities[2],
-                                        1 - visibilities[3], 1, 1, visibilities[3]
-                                    ];
-                                }
-                                else {
-                                    vertexData.colors = [
-                                        0, 1, 1, 1,
-                                        0, 1, 1, 1,
-                                        0, 1, 1, 1,
-                                        0, 1, 1, 1,
-                                        0, 1, 1, 1,
-                                        0, 1, 1, 1,
-                                        0, 1, 1, 1,
-                                        0, 1, 1, 1
-                                    ];
-                                }
+                                vertexData.colors = [
+                                    1 - visibilities[0], 1, 1, visibilities[0],
+                                    1 - visibilities[1], 1, 1, visibilities[1],
+                                    1 - visibilities[2], 1, 1, visibilities[2],
+                                    1 - visibilities[3], 1, 1, visibilities[3],
+                                    1 - visibilities[0], 1, 1, visibilities[0],
+                                    1 - visibilities[1], 1, 1, visibilities[1],
+                                    1 - visibilities[2], 1, 1, visibilities[2],
+                                    1 - visibilities[3], 1, 1, visibilities[3]
+                                ];
+
+                                /*
+                                vertexData.colors = [
+                                    pressures[0], 0, 1 - pressures[0], 1,
+                                    pressures[1], 0, 1 - pressures[1], 1,
+                                    pressures[2], 0, 1 - pressures[2], 1,
+                                    pressures[3], 0, 1 - pressures[3], 1,
+                                    pressures[0], 0, 1 - pressures[0], 1,
+                                    pressures[1], 0, 1 - pressures[1], 1,
+                                    pressures[2], 0, 1 - pressures[2], 1,
+                                    pressures[3], 0, 1 - pressures[3], 1
+                                ];
+                                */
 
                                 if (cell && cell.cellTop && (cell.cellTop.fillLevel < this.threshold || cell.cellTop.isSolid)) {
                                     let n = vertexData.positions.length / 3;
@@ -326,18 +292,10 @@ export class WaterEngine {
 
                                     vertexData.indices.push(n, n + 1, n + 2, n, n + 2, n + 3);
 
-                                    if (cellMesh.hasVertexAlpha) {
-                                        vertexData.colors.push(1 - visibilities[3], 1, 1, visibilities[3]);
-                                        vertexData.colors.push(1 - visibilities[2], 1, 1, visibilities[2]);
-                                        vertexData.colors.push(1 - visibilities[2], 1, 1, visibilities[2]);
-                                        vertexData.colors.push(1 - visibilities[3], 1, 1, visibilities[3]);
-                                    }
-                                    else {
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                    }
+                                    vertexData.colors.push(1 - visibilities[3], 1, 1, visibilities[3]);
+                                    vertexData.colors.push(1 - visibilities[2], 1, 1, visibilities[2]);
+                                    vertexData.colors.push(1 - visibilities[2], 1, 1, visibilities[2]);
+                                    vertexData.colors.push(1 - visibilities[3], 1, 1, visibilities[3]);
                                 }
                                 if (cell && cell.cellRight && (cell.cellRight.fillLevel < this.threshold || cell.cellRight.isSolid)) {
                                     let n = vertexData.positions.length / 3;
@@ -348,18 +306,10 @@ export class WaterEngine {
 
                                     vertexData.indices.push(n, n + 1, n + 2, n, n + 2, n + 3);
 
-                                    if (cellMesh.hasVertexAlpha) {
-                                        vertexData.colors.push(1 - visibilities[1], 1, 1, visibilities[1]);
-                                        vertexData.colors.push(1 - visibilities[5 - 4], 1, 1, visibilities[5 - 4]);
-                                        vertexData.colors.push(1 - visibilities[6 - 4], 1, 1, visibilities[6 - 4]);
-                                        vertexData.colors.push(1 - visibilities[2], 1, 1, visibilities[2]);
-                                    }
-                                    else {
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                    }
+                                    vertexData.colors.push(1 - visibilities[1], 1, 1, visibilities[1]);
+                                    vertexData.colors.push(1 - visibilities[5 - 4], 1, 1, visibilities[5 - 4]);
+                                    vertexData.colors.push(1 - visibilities[6 - 4], 1, 1, visibilities[6 - 4]);
+                                    vertexData.colors.push(1 - visibilities[2], 1, 1, visibilities[2]);
                                 }
                                 if (cell && cell.cellLeft && (cell.cellLeft.fillLevel < this.threshold || cell.cellLeft.isSolid)) {
                                     let n = vertexData.positions.length / 3;
@@ -370,47 +320,28 @@ export class WaterEngine {
 
                                     vertexData.indices.push(n, n + 1, n + 2, n, n + 2, n + 3);
 
-                                    if (cellMesh.hasVertexAlpha) {
-                                        vertexData.colors.push(1 - visibilities[4 - 4], 1, 1, visibilities[4 - 4]);
-                                        vertexData.colors.push(1 - visibilities[0], 1, 1, visibilities[0]);
-                                        vertexData.colors.push(1 - visibilities[3], 1, 1, visibilities[3]);
-                                        vertexData.colors.push(1 - visibilities[7 - 4], 1, 1, visibilities[7 - 4]);
-                                    }
-                                    else {
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                        vertexData.colors.push(0, 1, 1, 1);
-                                    }
+                                    vertexData.colors.push(1 - visibilities[4 - 4], 1, 1, visibilities[4 - 4]);
+                                    vertexData.colors.push(1 - visibilities[0], 1, 1, visibilities[0]);
+                                    vertexData.colors.push(1 - visibilities[3], 1, 1, visibilities[3]);
+                                    vertexData.colors.push(1 - visibilities[7 - 4], 1, 1, visibilities[7 - 4]);
                                 }
 
                                 for (let i = 0; i < vertexData.colors.length / 4; i++) {
                                     vertexData.colors[i * 4 + 3] = 1;
                                 }
 
-                                /*
-                                    4, 6, 5, 4, 7, 6,
-                                    0, 4, 5, 0, 5, 1,
-                                    1, 5, 6, 1, 6, 2,
-                                    2, 6, 7, 2, 7, 3,
-                                    3, 7, 4, 3, 4, 0
-                                */
-
                                 vertexData.normals = [];
                                 VertexData.ComputeNormals(vertexData.positions, vertexData.indices, vertexData.normals);
-                                
-                                vertexData.applyToMesh(cellMesh);
-                                if (cellMesh.material instanceof StandardMaterial) {
-                                    //cellMesh.material.diffuseColor.set(cell.pressure, 0, 1 - cell.pressure);
-                                    cellMesh.material.diffuseColor.set(1, 1, 1);
-                                    cellMesh.material.specularColor.set(0, 0, 0);
-                                }
+
+                                vertexDataParts.push(vertexData);
                             }
                         }
                     }
                 }
             }
         }
+
+        MergeVertexDatas(...vertexDataParts).applyToMesh(this.waterMesh!);
     }
 
     public disconnectAllVertices() {

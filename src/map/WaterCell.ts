@@ -1,4 +1,4 @@
-import { Vector2 } from "@babylonjs/core";
+import { Vector2 } from "@babylonjs/core/Maths/math.vector";
 import type { WaterEngine } from "./WaterEngine";
 
 export class WaterCell {
@@ -43,19 +43,33 @@ export class WaterCell {
         this.flowDirection.scaleInPlace(0.9);
 
         let aboveCell = this.waterEngine.getCell(this.x, this.y + 1);
+        let leftCell = this.waterEngine.getCell(this.x - 1, this.y);
+        let rightCell = this.waterEngine.getCell(this.x + 1, this.y);
         if (aboveCell && !aboveCell.isSolid) {
             this.pressure = this.pressure + aboveCell.pressure;
         }
-
-        let leftCell = this.waterEngine.getCell(this.x - 1, this.y);
-        if (leftCell && !leftCell.isSolid) {
-            this.pressure = this.pressure * 0.5 + leftCell.pressure * 0.5;
+        else {
+            let aboveLeftCell = this.waterEngine.getCell(this.x - 1, this.y + 1);
+            let aboveRightCell = this.waterEngine.getCell(this.x + 1, this.y + 1);
+            if (leftCell && !leftCell.isSolid && aboveLeftCell && !aboveLeftCell.isSolid) {
+                this.pressure = this.pressure + aboveLeftCell.pressure;
+            }
+            else if (rightCell && !rightCell.isSolid && aboveRightCell && !aboveRightCell.isSolid) {
+                this.pressure = this.pressure + aboveRightCell.pressure;
+            }
         }
 
-        let rightCell = this.waterEngine.getCell(this.x + 1, this.y);
-        if (rightCell && !rightCell.isSolid) {
-            this.pressure = this.pressure * 0.5 + rightCell.pressure * 0.5;
+        if (leftCell && !leftCell.isSolid && rightCell && !rightCell.isSolid) {
+            this.pressure = this.pressure / 2 + leftCell.pressure / 4 + rightCell.pressure / 4;
         }
+        else if (leftCell && !leftCell.isSolid) {
+            this.pressure = this.pressure * 0.8 + leftCell.pressure * 0.2;
+        }
+        else if (rightCell && !rightCell.isSolid) {
+            this.pressure = this.pressure * 0.8 + rightCell.pressure * 0.2;
+        }
+
+        this.pressure = Math.max(this.pressure, 0);
 
         let belowCell = this.waterEngine.getCell(this.x, this.y - 1);
         if (belowCell && !belowCell.isSolid) {
@@ -73,41 +87,67 @@ export class WaterCell {
 
         let belowIsFilledOrSolid = !belowCell || belowCell.isSolid || belowCell.fillLevel >= 0.6;
 
-        if (leftCell && !leftCell.isSolid && belowIsFilledOrSolid) {
-            if (leftCell.pressure < this.pressure && this.fillLevel > leftCell.fillLevel * 0.6) {
-                let transfer = (this.pressure - leftCell.pressure);
-                transfer = Math.min(transfer, (this.fillLevel - leftCell.fillLevel * 0.6) / 2);
-                this.fillLevel -= transfer;
-                leftCell.fillLevel += transfer;
-                this.flowDirection.x -= transfer;
-            }
-        }
-        if (rightCell && !rightCell.isSolid && belowIsFilledOrSolid) {
-            if (rightCell.pressure < this.pressure && this.fillLevel > rightCell.fillLevel * 0.6) {
-                let transfer = (this.pressure - rightCell.pressure);
-                transfer = Math.min(transfer, (this.fillLevel - rightCell.fillLevel * 0.6) / 2);
-                this.fillLevel -= transfer;
-                rightCell.fillLevel += transfer;
-                this.flowDirection.x += transfer;
+        let tic = () => {
+            if (leftCell && !leftCell.isSolid && belowIsFilledOrSolid) {
+                if (leftCell.pressure < this.pressure && this.fillLevel > leftCell.fillLevel * 0.6) {
+                    let transfer = (this.pressure - leftCell.pressure);
+                    transfer = Math.max(0, Math.min(transfer, (this.fillLevel - leftCell.fillLevel * 0.6) / 2));
+                    this.fillLevel -= transfer;
+                    leftCell.fillLevel += transfer;
+                    this.flowDirection.x -= transfer;
+                }
             }
         }
         
+        let tac = () => {
+            if (rightCell && !rightCell.isSolid && belowIsFilledOrSolid) {
+                if (rightCell.pressure < this.pressure && this.fillLevel > rightCell.fillLevel * 0.6) {
+                    let transfer = (this.pressure - rightCell.pressure);
+                    transfer = Math.max(0, Math.min(transfer, (this.fillLevel - rightCell.fillLevel * 0.6) / 2));
+                    this.fillLevel -= transfer;
+                    rightCell.fillLevel += transfer;
+                    this.flowDirection.x += transfer;
+                }
+            }
+        }
+
+        tic();
+        tac();
+        
         if (this.fillLevel > 1) {
             let overflow = this.fillLevel - 1;
-            let adjacentCells = [aboveCell, rightCell, leftCell, belowCell].filter(c => c && !c.isSolid) as WaterCell[];
-            let transfer = overflow / adjacentCells.length;
-            this.fillLevel = 1;
-            for (let cell of adjacentCells) {
-                cell.fillLevel += transfer;
-                if (cell === aboveCell) {
-                    this.flowDirection.y += transfer;
-                } else if (cell === leftCell) {
-                    this.flowDirection.x -= transfer;
-                } else if (cell === rightCell) {
-                    this.flowDirection.x += transfer;
-                } else if (cell === belowCell) {
-                    this.flowDirection.y -= transfer;
-                }
+            let weight = 1;
+            if (this.cellTop && !this.cellTop.isSolid) {
+                weight += 2;
+            }
+            if (this.cellRight && !this.cellRight.isSolid) {
+                weight += 1;
+            }
+            if (this.cellBottom && !this.cellBottom.isSolid) {
+                weight += 0.5;
+            }
+            if (this.cellLeft && !this.cellLeft.isSolid) {
+                weight += 1;
+            }
+
+            let transfer = overflow / weight;
+            this.fillLevel -= transfer * (weight - 1);
+
+            if (this.cellTop && !this.cellTop.isSolid) {
+                this.cellTop.fillLevel += transfer * 2;
+                this.flowDirection.y += transfer * 2;
+            }
+            if (this.cellRight && !this.cellRight.isSolid) {
+                this.cellRight.fillLevel += transfer * 1;
+                this.flowDirection.x += transfer * 1;
+            }
+            if (this.cellBottom && !this.cellBottom.isSolid) {
+                this.cellBottom.fillLevel += transfer * 0.5;
+                this.flowDirection.y -= transfer * 0.5;
+            }
+            if (this.cellLeft && !this.cellLeft.isSolid) {
+                this.cellLeft.fillLevel += transfer * 1;
+                this.flowDirection.x -= transfer * 1;
             }
         }
 
@@ -165,6 +205,7 @@ export class WaterCell {
 
         this.visibleFillLevel = this.visibleFillLevel * 0.95 + this.fillLevel * 0.05;
         this.visibleFillLevel = this.fillLevel;
+        this.visibleFillLevel = Math.max(Math.min(this.visibleFillLevel, 1), 0);
 
         if (this.flowDirection.length() > 1) {
             this.flowDirection.normalize();

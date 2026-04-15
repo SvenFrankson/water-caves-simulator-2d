@@ -1,4 +1,5 @@
-import { Quaternion, Vector3, VertexData } from "@babylonjs/core";
+import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 
 export function CloneVertexData(data: VertexData): VertexData {
     let clonedData = new VertexData();
@@ -221,23 +222,25 @@ export function MirrorZVertexDataInPlace(data: VertexData): VertexData {
     return data;
 }
 
-/*
-export function TriFlipVertexDataInPlace(data: VertexData): VertexData {
-    let indices = [...data.indices];
-    for (let i = 0; i < indices.length / 3; i++) {
-        let i1 = indices[3 * i + 1];
-        let i2 = indices[3 * i + 2];
-        indices[3 * i + 1] = i2;
-        indices[3 * i + 2] = i1;
+export function TriFlipVertexDataInPlace(data: VertexData, flipNormals: boolean = false): VertexData {
+    if (data.indices) {
+        let indices = [...data.indices];
+        for (let i = 0; i < indices.length / 3; i++) {
+            let i1 = indices[3 * i + 1];
+            let i2 = indices[3 * i + 2];
+            indices[3 * i + 1] = i2;
+            indices[3 * i + 2] = i1;
+        }
+        data.indices = indices;
     }
-    data.indices = indices;
-    if (data.normals) {
+    if (flipNormals && data.normals) {
         data.normals = data.normals.map((n: number) => { return - n; });
     }
 
     return data;
 }
 
+/*
 export function ColorizeVertexDataInPlace(data: VertexData, color: Color3, colorToReplace?: Color3): VertexData {
     let colors = [];
     if (colorToReplace && data.colors) {

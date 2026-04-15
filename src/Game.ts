@@ -1,6 +1,8 @@
-import { Engine, Scene } from "@babylonjs/core";
+import { Scene } from "@babylonjs/core/scene";
+import { Engine } from "@babylonjs/core/Engines/engine";
 import { TestScene } from "./TestScene";
 import { MyCamera } from "./MyCamera";
+import "@babylonjs/core/Culling/ray";
 
 export class Game {
 
@@ -20,7 +22,7 @@ export class Game {
     }
 
     public start() {
-        const testScene = new TestScene(this);
+        new TestScene(this, 40);
         this.engine.runRenderLoop(() => {
             this.scene.render()
         })

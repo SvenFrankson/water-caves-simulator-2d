@@ -1,7 +1,12 @@
-import { ImportMeshAsync, Mesh, Vector3, VertexData } from "@babylonjs/core";
+import { ImportMeshAsync } from "@babylonjs/core/Loading/sceneLoader";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import type { WaterEngine } from "./WaterEngine";
 import type { Game } from "../Game";
-import { CloneVertexData, MergeVertexDatas, RotateAngleAxisVertexDataInPlace, RotateVertexDataInPlace, TranslateVertexDataInPlace } from "../VertexDataUtils";
+import { CloneVertexData, MergeVertexDatas, MirrorZVertexDataInPlace, RotateAngleAxisVertexDataInPlace, TranslateVertexDataInPlace, TriFlipVertexDataInPlace } from "../VertexDataUtils";
+import { registerBuiltInLoaders } from "@babylonjs/loaders/dynamic";
+registerBuiltInLoaders();
 
 export class RockGenerator {
 
@@ -13,7 +18,20 @@ export class RockGenerator {
     }
 
     public async init(): Promise<void> {
-        let data = await ImportMeshAsync("public/meshes/blocks.babylon", this.game.scene);
+        let data = await ImportMeshAsync("meshes/blocks.gltf", this.game.scene);
+        console.log(data);
+
+        data.meshes.forEach(mesh => {
+            mesh.parent = null;
+            mesh.position.copyFromFloats(0, 0, 0); 
+            mesh.rotation.copyFromFloats(0, 0, 0);
+            if (mesh instanceof Mesh) {
+                let vData = VertexData.ExtractFromMesh(mesh);
+                MirrorZVertexDataInPlace(vData);
+                TriFlipVertexDataInPlace(vData);
+                vData.applyToMesh(mesh);
+            }
+        });
         
         let block1000 = data.meshes.find(mesh => mesh.name === "1000-block");
         let block1100 = data.meshes.find(mesh => mesh.name === "1100-block");
@@ -28,6 +46,11 @@ export class RockGenerator {
             let vertexData1111 = VertexData.ExtractFromMesh(block1111);
             let vertexData1010 = VertexData.ExtractFromMesh(block1010);
 
+            block1000.dispose();
+            block1100.dispose();
+            block1101.dispose();
+            block1111.dispose();
+            block1010.dispose();
             
             this.partialVertexDatas[1] = vertexData1000;
             this.partialVertexDatas[2] = RotateAngleAxisVertexDataInPlace(CloneVertexData(vertexData1000), Math.PI / 2, new Vector3(0, 0, 1));
@@ -53,8 +76,8 @@ export class RockGenerator {
     public generateRockVertexData(): VertexData {
         let vertexDataParts: VertexData[] = [];
 
-        for (let i = 0; i < this.waterEngine.width; i++) {
-            for (let j = 0; j < this.waterEngine.height; j++) {
+        for (let i = -1; i < this.waterEngine.width; i++) {
+            for (let j = -1; j < this.waterEngine.height; j++) {
                 let cell00 = this.waterEngine.getCell(i, j);
                 let cell10 = this.waterEngine.getCell(i + 1, j);
                 let cell11 = this.waterEngine.getCell(i + 1, j + 1);

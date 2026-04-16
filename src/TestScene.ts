@@ -10,6 +10,7 @@ import { Duck } from "./Duck";
 export class TestScene {
 
     public waterEngine: WaterEngine;
+    public testDuck: Duck;
 
     constructor(public game: Game, size: number = 40) {
 
@@ -38,7 +39,7 @@ export class TestScene {
 
         game.scene.onBeforeRenderObservable.add(this._update);
 
-        new Duck("duck", game, this.waterEngine);
+        this.testDuck = new Duck("duck", game, this.waterEngine);
 
         document.body.querySelector("#brush-reset-s")?.addEventListener("click", () => {
             this.setWidthAndHeight(20, 20);
@@ -67,6 +68,9 @@ export class TestScene {
         this.waterEngine.setWidthAndHeight(width, height);
 
         this.waterEngine.cells = [];
+        if (false) {
+            this._generateTest1();
+        }
         this._generateTest2();
         
         this.waterEngine.neighbourize();
@@ -76,6 +80,10 @@ export class TestScene {
         this.game.camera.radius = Math.max(this.waterEngine.width, this.waterEngine.height) * 2;
         this.game.camera.lowerRadiusLimit = 15;
         this.game.camera.upperRadiusLimit = Math.max(this.waterEngine.width, this.waterEngine.height) * 3;
+
+        if (this.testDuck) {
+            this.testDuck.position.copyFromFloats(this.waterEngine.width / 2, this.waterEngine.height / 2, 0);
+        }
     }
 
     private _generateTest1(): void {

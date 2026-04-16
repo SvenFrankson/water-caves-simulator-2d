@@ -1,3 +1,4 @@
+import type { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 
@@ -240,28 +241,28 @@ export function TriFlipVertexDataInPlace(data: VertexData, flipNormals: boolean 
     return data;
 }
 
-/*
 export function ColorizeVertexDataInPlace(data: VertexData, color: Color3, colorToReplace?: Color3): VertexData {
-    let colors = [];
+    let colors: number[] = [];
     if (colorToReplace && data.colors) {
         colors = [...data.colors];
     }
-    for (let i = 0; i < data.positions.length / 3; i++) {
-        if (colorToReplace) {
-            let r = data.colors[4 * i];
-            let g = data.colors[4 * i + 1];
-            let b = data.colors[4 * i + 2];
-            if (r != colorToReplace.r || g != colorToReplace.g || b != colorToReplace.b) {
-                continue;
+    if (data.positions && data.colors) {
+        for (let i = 0; i < data.positions.length / 3; i++) {
+            if (colorToReplace) {
+                let r = data.colors[4 * i];
+                let g = data.colors[4 * i + 1];
+                let b = data.colors[4 * i + 2];
+                if (r != colorToReplace.r || g != colorToReplace.g || b != colorToReplace.b) {
+                    continue;
+                }
             }
+            colors[4 * i] = color.r;
+            colors[4 * i + 1] = color.g;
+            colors[4 * i + 2] = color.b;
+            colors[4 * i + 3] = 1;
         }
-        colors[4 * i] = color.r;
-        colors[4 * i + 1] = color.g;
-        colors[4 * i + 2] = color.b;
-        colors[4 * i + 3] = 1;
     }
     data.colors = colors;
 
     return data;
 }
-*/

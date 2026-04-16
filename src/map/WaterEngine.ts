@@ -77,6 +77,7 @@ export class WaterEngine {
         this.waterMaterial = new StandardMaterial("water-material");
         this.waterMaterial.diffuseColor.set(1, 1, 1);
         this.waterMaterial.specularColor.set(0.1, 0.1, 0.1);
+        this.waterMaterial.alpha = 0.5;
 
         this.frame = MeshBuilder.CreateBox("frame", { width: 1, height: 1, depth: 1 });
         this.frame.material = this.frameMaterial;
@@ -87,8 +88,6 @@ export class WaterEngine {
         this.rockMesh.material = this.rockMaterial;
 
         this.waterMesh = new Mesh("water-mesh");
-        //this.waterMesh.hasVertexAlpha = true;
-        this.waterMaterial.alpha = 0.8;
         this.waterMesh.material = this.waterMaterial;
         
         this.rockGenerator = new RockGenerator(this, this.game);
@@ -165,6 +164,9 @@ export class WaterEngine {
     private _pressures: number[] = [0, 0, 0, 0];
 
     public redraw() {
+        if (Math.random() < 0.9) {
+            return;
+        }
         this.updateVertices();
 
         for (let i = 0; i < this.cells.length; i++) {
@@ -353,6 +355,9 @@ export class WaterEngine {
         }
 
         MergeVertexDatas(...vertexDataParts).applyToMesh(this.waterMesh!);
+        if (this.waterMesh) {
+            this.waterMesh.refreshBoundingInfo();
+        }
     }
 
     public disconnectAllVertices() {

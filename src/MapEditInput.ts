@@ -12,6 +12,7 @@ enum MapEditBrush {
 export class MapEditInput {
 
     public brush: MapEditBrush = MapEditBrush.None;
+    public erasingRock: number = -1;
     public pointerIsDown: boolean = false;
 
     public rockButton: HTMLButtonElement;
@@ -93,11 +94,17 @@ export class MapEditInput {
                     }
                     else if (this.brush === MapEditBrush.Eraser) {
                         if (i > 0 && j > 0 && i < this.waterEngine.width - 1 && j < this.waterEngine.height - 1) {
-                            cell.fillLevel = 0;
-                            if (cell.isSolid) {
+                            if (cell.isSolid && this.erasingRock != 0) {
+                                cell.fillLevel = 0;
                                 cell.isSolid = false;
                                 this.waterEngine.redrawRocks();
+                                this.erasingRock = 1;
                             }
+                            else if (!cell.isSolid && this.erasingRock != 1) {
+                                cell.fillLevel = 0;
+                                this.erasingRock = 0;
+                            }
+
                         }
                     }
                     else if (this.brush === MapEditBrush.Water) {
@@ -120,5 +127,6 @@ export class MapEditInput {
     private _onPointerUp = (_evt: PointerEvent) => {
         this.pointerIsDown = false;
         this.game.camera.attachControl(this.game.canvas, true);
+        this.erasingRock = -1;
     }
 }

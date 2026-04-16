@@ -87,7 +87,8 @@ export class WaterEngine {
         this.rockMesh.material = this.rockMaterial;
 
         this.waterMesh = new Mesh("water-mesh");
-        this.waterMesh.hasVertexAlpha = true;
+        //this.waterMesh.hasVertexAlpha = true;
+        this.waterMaterial.alpha = 0.8;
         this.waterMesh.material = this.waterMaterial;
         
         this.rockGenerator = new RockGenerator(this, this.game);
@@ -95,6 +96,8 @@ export class WaterEngine {
 
     public dispose(): void {
         this.frame.dispose();
+        this.rockMesh?.dispose();
+        this.waterMesh?.dispose();
     }
 
     public setWidthAndHeight(width: number, height: number): void {
@@ -143,10 +146,15 @@ export class WaterEngine {
             for (let j = 0; j < this.height; j++) {
                 let cell = this.getCell(i, j);
                 if (cell) {
+                    cell.neighbours[0][0] = this.getCell(i - 1, j - 1);
                     cell.neighbours[0][1] = this.getCell(i - 1, j);
+                    cell.neighbours[0][2] = this.getCell(i - 1, j + 1);
                     cell.neighbours[1][0] = this.getCell(i, j - 1);
+                    cell.neighbours[1][1] = cell;
                     cell.neighbours[1][2] = this.getCell(i, j + 1);
+                    cell.neighbours[2][0] = this.getCell(i + 1, j - 1);
                     cell.neighbours[2][1] = this.getCell(i + 1, j);
+                    cell.neighbours[2][2] = this.getCell(i + 1, j + 1);
                 }
             }
         }
@@ -222,15 +230,18 @@ export class WaterEngine {
                                 visibilities[2] = this.vertices[cell.x + 1][cell.y + 1].visibility;
                                 visibilities[3] = this.vertices[cell.x][cell.y + 1].visibility;
                                 
+                                let f = (x: number) => {
+                                    return Math.cos(x * Math.PI) * 0.5 + 0.5;
+                                }
                                 let pressures = this._pressures;
-                                pressures[0] = this.vertices[cell.x][cell.y].pressure / 5;
-                                pressures[0] = Math.max(Math.min(pressures[0], 1), 0);
-                                pressures[1] = this.vertices[cell.x + 1][cell.y].pressure / 5;
-                                pressures[1] = Math.max(Math.min(pressures[1], 1), 0);
-                                pressures[2] = this.vertices[cell.x + 1][cell.y + 1].pressure / 5;
-                                pressures[2] = Math.max(Math.min(pressures[2], 1), 0);
-                                pressures[3] = this.vertices[cell.x][cell.y + 1].pressure / 5;
-                                pressures[3] = Math.max(Math.min(pressures[3], 1), 0);
+                                pressures[0] = this.vertices[cell.x][cell.y].pressure / 3;
+                                pressures[0] = f(pressures[0]);
+                                pressures[1] = this.vertices[cell.x + 1][cell.y].pressure / 3;
+                                pressures[1] = f(pressures[1]);
+                                pressures[2] = this.vertices[cell.x + 1][cell.y + 1].pressure / 3;
+                                pressures[2] = f(pressures[2]);
+                                pressures[3] = this.vertices[cell.x][cell.y + 1].pressure / 3;
+                                pressures[3] = f(pressures[3]);
                                 
                                 pts[0].z = - visibilities[0] * 0.5;
                                 pts[1].z = - visibilities[1] * 0.5;
@@ -292,10 +303,10 @@ export class WaterEngine {
 
                                     vertexData.indices.push(n, n + 1, n + 2, n, n + 2, n + 3);
 
-                                    vertexData.colors.push(1 - visibilities[3], 1, 1, visibilities[3]);
-                                    vertexData.colors.push(1 - visibilities[2], 1, 1, visibilities[2]);
-                                    vertexData.colors.push(1 - visibilities[2], 1, 1, visibilities[2]);
-                                    vertexData.colors.push(1 - visibilities[3], 1, 1, visibilities[3]);
+                                    vertexData.colors.push(1 - visibilities[3] * 0.5, 1, 1, visibilities[3]);
+                                    vertexData.colors.push(1 - visibilities[2] * 0.5, 1, 1, visibilities[2]);
+                                    vertexData.colors.push(1 - visibilities[2] * 0.5, 1, 1, visibilities[2]);
+                                    vertexData.colors.push(1 - visibilities[3] * 0.5, 1, 1, visibilities[3]);
                                 }
                                 if (cell && cell.cellRight && (cell.cellRight.fillLevel < this.threshold || cell.cellRight.isSolid)) {
                                     let n = vertexData.positions.length / 3;

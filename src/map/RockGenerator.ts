@@ -4,7 +4,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import type { WaterEngine } from "./WaterEngine";
 import type { Game } from "../Game";
-import { CloneVertexData, MergeVertexDatas, MirrorZVertexDataInPlace, RotateAngleAxisVertexDataInPlace, TranslateVertexDataInPlace, TriFlipVertexDataInPlace } from "../VertexDataUtils";
+import { CloneVertexData, MergeVertexDatas, MirrorZVertexDataInPlace, RotateAngleAxisVertexDataInPlace, ScaleVertexDataInPlace, TranslateVertexDataInPlace, TriFlipVertexDataInPlace } from "../VertexDataUtils";
 import { registerBuiltInLoaders } from "@babylonjs/loaders/dynamic";
 registerBuiltInLoaders();
 
@@ -29,6 +29,7 @@ export class RockGenerator {
                 let vData = VertexData.ExtractFromMesh(mesh);
                 MirrorZVertexDataInPlace(vData);
                 TriFlipVertexDataInPlace(vData);
+                ScaleVertexDataInPlace(vData, this.waterEngine.cellSize);
                 vData.applyToMesh(mesh);
             }
         });
@@ -100,7 +101,7 @@ export class RockGenerator {
                 let vertexDataPart = this.partialVertexDatas[ref];
                 if (vertexDataPart) {
                     let vertexDataPartClone = CloneVertexData(vertexDataPart);
-                    TranslateVertexDataInPlace(vertexDataPartClone, new Vector3(i + 0.5, j + 0.5, 0));
+                    TranslateVertexDataInPlace(vertexDataPartClone, new Vector3(i + 0.5, j + 0.5, 0).scale(this.waterEngine.cellSize));
                     vertexDataParts.push(vertexDataPartClone);
                 }
             }

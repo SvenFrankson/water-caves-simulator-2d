@@ -81,8 +81,8 @@ export class MapEditInput {
             let ray = this.game.scene.createPickingRay(this.game.scene.pointerX, this.game.scene.pointerY, Matrix.Identity(), this.game.camera);
             let pickResult = this.game.scene.pickWithRay(ray, (mesh) => mesh === this.waterEngine.frame);
             if (pickResult && pickResult.hit && pickResult.pickedMesh) {
-                let i = Math.round(pickResult.pickedPoint!.x);
-                let j = Math.round(pickResult.pickedPoint!.y);
+                let i = Math.round(pickResult.pickedPoint!.x / this.waterEngine.cellSize);
+                let j = Math.round(pickResult.pickedPoint!.y / this.waterEngine.cellSize);
                 let cell = this.waterEngine.getCell(i, j);
                 if (cell) {
                     if (this.brush === MapEditBrush.Rock) {

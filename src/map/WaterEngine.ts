@@ -16,8 +16,8 @@ export class WaterEngineVertex {
     public visibility: number = 0.5;
     public pressure: number = 0.5;
 
-    constructor(public x: number, public y: number) {
-        this.position.set(x, y, 0);
+    constructor(public x: number, public y: number, public waterEngine?: WaterEngine) {
+        this.position.set(x, y, 0).scaleInPlace(waterEngine ? waterEngine.cellSize : 1);
     }
 
     public connectTo(vertex: WaterEngineVertex) {
@@ -49,6 +49,8 @@ export class WaterEngineVertex {
 
 export class WaterEngine {
 
+    public cellSize: number = 0.5;
+
     public frame: Mesh;
     public cells: WaterCell[][] = [];
     public contourLevel: number = 0.5;
@@ -68,11 +70,11 @@ export class WaterEngine {
     
     constructor(public width: number = 20, public height: number = 20, public game: Game) {
         this.rockMaterial = new StandardMaterial("solid-material");
-        this.rockMaterial.diffuseColor.set(0.5, 0.5, 0.5);
+        this.rockMaterial.diffuseColor.set(0.7, 0.7, 0.7);
         this.rockMaterial.specularColor.set(0.1, 0.1, 0.1);
 
         this.frameMaterial = new StandardMaterial("solid-material");
-        this.frameMaterial.diffuseColor.set(0.1, 0.1, 0.1);
+        this.frameMaterial.diffuseColor.set(0.2, 0.2, 0.2);
 
         this.waterMaterial = new StandardMaterial("water-material");
         this.waterMaterial.diffuseColor.set(1, 1, 1);
@@ -103,14 +105,14 @@ export class WaterEngine {
         this.width = width;
         this.height = height;
 
-        this.frame.position.set(this.width / 2 - 0.5, this.height / 2 - 0.5, 0.5 + 0.6);
-        this.frame.scaling.set(this.width, this.height, 1);
+        this.frame.position.set(this.cellSize * (this.width / 2 - 0.5), this.cellSize * (this.height / 2 - 0.5), 0.5 + 0.6);
+        this.frame.scaling.set(this.cellSize * this.width, this.cellSize * this.height, 1);
 
         this.vertices = [];
         for (let i = 0; i <= this.width; i++) {
             this.vertices[i] = [];
             for (let j = 0; j <= this.height; j++) {
-                this.vertices[i][j] = new WaterEngineVertex(i - 0.5, j - 0.5);
+                this.vertices[i][j] = new WaterEngineVertex(i - 0.5, j - 0.5, this);
             }
         }
     }
@@ -127,10 +129,10 @@ export class WaterEngine {
     }
 
     public addCell(cell: WaterCell) {
-        if (!this.cells[cell.x]) {
-            this.cells[cell.x] = [];
+        if (!this.cells[cell.i]) {
+            this.cells[cell.i] = [];
         }
-        this.cells[cell.x][cell.y] = cell;
+        this.cells[cell.i][cell.j] = cell;
     }
 
     public getCell(x: number, y: number): WaterCell | undefined {
@@ -164,9 +166,6 @@ export class WaterEngine {
     private _pressures: number[] = [0, 0, 0, 0];
 
     public redraw() {
-        if (Math.random() < 0.9) {
-            return;
-        }
         this.updateVertices();
 
         for (let i = 0; i < this.cells.length; i++) {
@@ -179,24 +178,24 @@ export class WaterEngine {
                             if (cell.fillLevel >= this.threshold) {
                                 let visibility = EaseOutCirc(cell.visibleFillLevel);
 
-                                this.vertices[cell.x][cell.y].visibility *= 0.9;
-                                this.vertices[cell.x][cell.y].visibility += visibility * 0.1;
-                                this.vertices[cell.x + 1][cell.y].visibility *= 0.9;
-                                this.vertices[cell.x + 1][cell.y].visibility += visibility * 0.1;
-                                this.vertices[cell.x][cell.y + 1].visibility *= 0.9;
-                                this.vertices[cell.x][cell.y + 1].visibility += visibility * 0.1;
-                                this.vertices[cell.x + 1][cell.y + 1].visibility *= 0.9;
-                                this.vertices[cell.x + 1][cell.y + 1].visibility += visibility * 0.1;
+                                this.vertices[cell.i][cell.j].visibility *= 0.9;
+                                this.vertices[cell.i][cell.j].visibility += visibility * 0.1;
+                                this.vertices[cell.i + 1][cell.j].visibility *= 0.9;
+                                this.vertices[cell.i + 1][cell.j].visibility += visibility * 0.1;
+                                this.vertices[cell.i][cell.j + 1].visibility *= 0.9;
+                                this.vertices[cell.i][cell.j + 1].visibility += visibility * 0.1;
+                                this.vertices[cell.i + 1][cell.j + 1].visibility *= 0.9;
+                                this.vertices[cell.i + 1][cell.j + 1].visibility += visibility * 0.1;
 
                                 let pressure = cell.pressure;
-                                this.vertices[cell.x][cell.y].pressure *= 0.9;
-                                this.vertices[cell.x][cell.y].pressure += pressure * 0.1;
-                                this.vertices[cell.x + 1][cell.y].pressure *= 0.9;
-                                this.vertices[cell.x + 1][cell.y].pressure += pressure * 0.1;
-                                this.vertices[cell.x][cell.y + 1].pressure *= 0.9;
-                                this.vertices[cell.x][cell.y + 1].pressure += pressure * 0.1;
-                                this.vertices[cell.x + 1][cell.y + 1].pressure *= 0.9;
-                                this.vertices[cell.x + 1][cell.y + 1].pressure += pressure * 0.1;
+                                this.vertices[cell.i][cell.j].pressure *= 0.9;
+                                this.vertices[cell.i][cell.j].pressure += pressure * 0.1;
+                                this.vertices[cell.i + 1][cell.j].pressure *= 0.9;
+                                this.vertices[cell.i + 1][cell.j].pressure += pressure * 0.1;
+                                this.vertices[cell.i][cell.j + 1].pressure *= 0.9;
+                                this.vertices[cell.i][cell.j + 1].pressure += pressure * 0.1;
+                                this.vertices[cell.i + 1][cell.j + 1].pressure *= 0.9;
+                                this.vertices[cell.i + 1][cell.j + 1].pressure += pressure * 0.1;
                             }
                         }
                     }
@@ -217,32 +216,32 @@ export class WaterEngine {
                             }
                             else {
                                 let pts = this._pts;
-                                pts[0].copyFrom(this.vertices[cell.x][cell.y].position);
-                                pts[1].copyFrom(this.vertices[cell.x + 1][cell.y].position);
-                                pts[2].copyFrom(this.vertices[cell.x + 1][cell.y + 1].position);
-                                pts[3].copyFrom(this.vertices[cell.x][cell.y + 1].position);
-                                pts[4].copyFrom(this.vertices[cell.x][cell.y].position);
-                                pts[5].copyFrom(this.vertices[cell.x + 1][cell.y].position);
-                                pts[6].copyFrom(this.vertices[cell.x + 1][cell.y + 1].position);
-                                pts[7].copyFrom(this.vertices[cell.x][cell.y + 1].position);
+                                pts[0].copyFrom(this.vertices[cell.i][cell.j].position);
+                                pts[1].copyFrom(this.vertices[cell.i + 1][cell.j].position);
+                                pts[2].copyFrom(this.vertices[cell.i + 1][cell.j + 1].position);
+                                pts[3].copyFrom(this.vertices[cell.i][cell.j + 1].position);
+                                pts[4].copyFrom(this.vertices[cell.i][cell.j].position);
+                                pts[5].copyFrom(this.vertices[cell.i + 1][cell.j].position);
+                                pts[6].copyFrom(this.vertices[cell.i + 1][cell.j + 1].position);
+                                pts[7].copyFrom(this.vertices[cell.i][cell.j + 1].position);
 
                                 let visibilities = this._visibilities;
-                                visibilities[0] = this.vertices[cell.x][cell.y].visibility;
-                                visibilities[1] = this.vertices[cell.x + 1][cell.y].visibility;
-                                visibilities[2] = this.vertices[cell.x + 1][cell.y + 1].visibility;
-                                visibilities[3] = this.vertices[cell.x][cell.y + 1].visibility;
+                                visibilities[0] = this.vertices[cell.i][cell.j].visibility;
+                                visibilities[1] = this.vertices[cell.i + 1][cell.j].visibility;
+                                visibilities[2] = this.vertices[cell.i + 1][cell.j + 1].visibility;
+                                visibilities[3] = this.vertices[cell.i][cell.j + 1].visibility;
                                 
                                 let f = (x: number) => {
                                     return Math.cos(x * Math.PI) * 0.5 + 0.5;
                                 }
                                 let pressures = this._pressures;
-                                pressures[0] = this.vertices[cell.x][cell.y].pressure / 3;
+                                pressures[0] = this.vertices[cell.i][cell.j].pressure / 3;
                                 pressures[0] = f(pressures[0]);
-                                pressures[1] = this.vertices[cell.x + 1][cell.y].pressure / 3;
+                                pressures[1] = this.vertices[cell.i + 1][cell.j].pressure / 3;
                                 pressures[1] = f(pressures[1]);
-                                pressures[2] = this.vertices[cell.x + 1][cell.y + 1].pressure / 3;
+                                pressures[2] = this.vertices[cell.i + 1][cell.j + 1].pressure / 3;
                                 pressures[2] = f(pressures[2]);
-                                pressures[3] = this.vertices[cell.x][cell.y + 1].pressure / 3;
+                                pressures[3] = this.vertices[cell.i][cell.j + 1].pressure / 3;
                                 pressures[3] = f(pressures[3]);
                                 
                                 pts[0].z = - visibilities[0] * 0.5;
@@ -372,32 +371,32 @@ export class WaterEngine {
         let oneVertex: WaterEngineVertex | undefined = undefined;
         cell.drawn = true;
 
-        let cellTop = this.cells[cell.x][cell.y + 1];
-        let cellRight = this.cells[cell.x + 1][cell.y];
-        let cellBottom = this.cells[cell.x][cell.y - 1];
-        let cellLeft = this.cells[cell.x - 1][cell.y];
+        let cellTop = this.cells[cell.i][cell.j + 1];
+        let cellRight = this.cells[cell.i + 1][cell.j];
+        let cellBottom = this.cells[cell.i][cell.j - 1];
+        let cellLeft = this.cells[cell.i - 1][cell.j];
 
         if (!cellTop || cellTop.isSolid || cellTop.fillLevel < 0.001) {
-            let vertex01 = this.vertices[cell.x][cell.y + 1];
-            let vertex11 = this.vertices[cell.x + 1][cell.y + 1];
+            let vertex01 = this.vertices[cell.i][cell.j + 1];
+            let vertex11 = this.vertices[cell.i + 1][cell.j + 1];
             oneVertex = Math.random() < 0.5 ? vertex01 : vertex11;
             vertex01.connectTo(vertex11);
         }
         if (!cellRight || cellRight.isSolid || cellRight.fillLevel < 0.001) {
-            let vertex10 = this.vertices[cell.x + 1][cell.y];
-            let vertex11 = this.vertices[cell.x + 1][cell.y + 1];
+            let vertex10 = this.vertices[cell.i + 1][cell.j];
+            let vertex11 = this.vertices[cell.i + 1][cell.j + 1];
             oneVertex = Math.random() < 0.5 ? vertex10 : vertex11;
             vertex10.connectTo(vertex11);
         }
         if (!cellBottom || cellBottom.isSolid || cellBottom.fillLevel < 0.001) {
-            let vertex00 = this.vertices[cell.x][cell.y];
-            let vertex10 = this.vertices[cell.x + 1][cell.y];
+            let vertex00 = this.vertices[cell.i][cell.j];
+            let vertex10 = this.vertices[cell.i + 1][cell.j];
             oneVertex = Math.random() < 0.5 ? vertex00 : vertex10;
             vertex00.connectTo(vertex10);
         }
         if (!cellLeft || cellLeft.isSolid || cellLeft.fillLevel < 0.001) {
-            let vertex00 = this.vertices[cell.x][cell.y];
-            let vertex01 = this.vertices[cell.x][cell.y + 1];
+            let vertex00 = this.vertices[cell.i][cell.j];
+            let vertex01 = this.vertices[cell.i][cell.j + 1];
             oneVertex = Math.random() < 0.5 ? vertex00 : vertex01;
             vertex00.connectTo(vertex01);
         }
@@ -498,8 +497,8 @@ export class WaterEngine {
                 }
 
                 if (needDraw === 0) {
-                    vertex.position.x = vertex.position.x * 0.95 + (i - 0.5) * 0.05;
-                    vertex.position.y = vertex.position.y * 0.95 + (j - 0.5) * 0.05;
+                    vertex.position.x = vertex.position.x * 0.95 + this.cellSize * (i - 0.5) * 0.05;
+                    vertex.position.y = vertex.position.y * 0.95 + this.cellSize * (j - 0.5) * 0.05;
                     continue;
                 }
                 if (needDraw === 15) {
@@ -649,9 +648,9 @@ export class WaterEngine {
                 if (cell && !cell.isSolid && cell.visibleFillLevel >= threshold) {
                     
                     let neighbours: (WaterCell | undefined)[][] = [
-                        [this.getCell(cell.x - 1, cell.y - 1), this.getCell(cell.x - 1, cell.y), this.getCell(cell.x - 1, cell.y + 1)],
-                        [this.getCell(cell.x, cell.y - 1), /* this cell */ this.getCell(cell.x, cell.y), this.getCell(cell.x, cell.y + 1)],
-                        [this.getCell(cell.x + 1, cell.y - 1), this.getCell(cell.x + 1, cell.y), this.getCell(cell.x + 1, cell.y + 1)],
+                        [this.getCell(cell.i - 1, cell.j - 1), this.getCell(cell.i - 1, cell.j), this.getCell(cell.i - 1, cell.j + 1)],
+                        [this.getCell(cell.i, cell.j - 1), /* this cell */ this.getCell(cell.i, cell.j), this.getCell(cell.i, cell.j + 1)],
+                        [this.getCell(cell.i + 1, cell.j - 1), this.getCell(cell.i + 1, cell.j), this.getCell(cell.i + 1, cell.j + 1)],
                     ];
                     let left = neighbours[0][1];
                     if (!left || left.isSolid || left.visibleFillLevel < threshold) {

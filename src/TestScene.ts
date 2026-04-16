@@ -82,7 +82,7 @@ export class TestScene {
         this.game.camera.upperRadiusLimit = Math.max(this.waterEngine.width, this.waterEngine.height) * 3;
 
         if (this.testDuck) {
-            this.testDuck.position.copyFromFloats(this.waterEngine.width / 2, this.waterEngine.height / 2, 0);
+            this.testDuck.position.copyFromFloats(this.waterEngine.width / 2, this.waterEngine.height / 2, 0).scaleInPlace(this.waterEngine.cellSize);
         }
     }
 

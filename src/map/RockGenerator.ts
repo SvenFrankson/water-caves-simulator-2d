@@ -6,6 +6,7 @@ import type { WaterEngine } from "./WaterEngine";
 import type { Game } from "../Game";
 import { CloneVertexData, MergeVertexDatas, MirrorZVertexDataInPlace, RotateAngleAxisVertexDataInPlace, ScaleVertexDataInPlace, TranslateVertexDataInPlace, TriFlipVertexDataInPlace } from "../VertexDataUtils";
 import { registerBuiltInLoaders } from "@babylonjs/loaders/dynamic";
+import { CELL_SIZE, HALF_WATER_CELL_SIZE, WATER_CELLS_PER_TERRAIN_CELL, type TerrainEngine } from "./TerrainEngine";
 registerBuiltInLoaders();
 
 export class RockGenerator {
@@ -13,7 +14,7 @@ export class RockGenerator {
     public partialVertexDatas: VertexData[] = [];
     public initialized: boolean = false;
     
-    constructor(public waterEngine: WaterEngine, public game: Game) {
+    constructor(public terrainEngine: TerrainEngine, public game: Game) {
 
     }
 
@@ -29,7 +30,7 @@ export class RockGenerator {
                 let vData = VertexData.ExtractFromMesh(mesh);
                 MirrorZVertexDataInPlace(vData);
                 TriFlipVertexDataInPlace(vData);
-                ScaleVertexDataInPlace(vData, this.waterEngine.cellSize);
+                ScaleVertexDataInPlace(vData, CELL_SIZE);
                 vData.applyToMesh(mesh);
             }
         });
@@ -77,12 +78,12 @@ export class RockGenerator {
     public generateRockVertexData(): VertexData {
         let vertexDataParts: VertexData[] = [];
 
-        for (let i = -1; i < this.waterEngine.width; i++) {
-            for (let j = -1; j < this.waterEngine.height; j++) {
-                let cell00 = this.waterEngine.getCell(i, j);
-                let cell10 = this.waterEngine.getCell(i + 1, j);
-                let cell11 = this.waterEngine.getCell(i + 1, j + 1);
-                let cell01 = this.waterEngine.getCell(i, j + 1);
+        for (let i = -1; i < this.terrainEngine.width; i++) {
+            for (let j = -1; j < this.terrainEngine.height; j++) {
+                let cell00 = this.terrainEngine.getCell(i, j);
+                let cell10 = this.terrainEngine.getCell(i + 1, j);
+                let cell11 = this.terrainEngine.getCell(i + 1, j + 1);
+                let cell01 = this.terrainEngine.getCell(i, j + 1);
 
                 let ref = 0;
                 if (cell00 && cell00.isSolid) {
@@ -101,7 +102,7 @@ export class RockGenerator {
                 let vertexDataPart = this.partialVertexDatas[ref];
                 if (vertexDataPart) {
                     let vertexDataPartClone = CloneVertexData(vertexDataPart);
-                    TranslateVertexDataInPlace(vertexDataPartClone, new Vector3(i + 0.5, j + 0.5, 0).scale(this.waterEngine.cellSize));
+                    TranslateVertexDataInPlace(vertexDataPartClone, new Vector3((i + 0.5) * CELL_SIZE + (WATER_CELLS_PER_TERRAIN_CELL - 1) * HALF_WATER_CELL_SIZE, (j + 0.5) * CELL_SIZE + (WATER_CELLS_PER_TERRAIN_CELL - 1) * HALF_WATER_CELL_SIZE, 0));
                     vertexDataParts.push(vertexDataPartClone);
                 }
             }

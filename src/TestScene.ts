@@ -6,10 +6,12 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { MapEditInput } from "./MapEditInput";
 import { Duck } from "./Duck";
+import { CELL_SIZE, TerrainEngine, WATER_CELLS_PER_TERRAIN_CELL } from "./map/TerrainEngine";
+import { TerrainCell } from "./map/TerrainCell";
 
 export class TestScene {
 
-    public waterEngine: WaterEngine;
+    public terrainEngine: TerrainEngine;
     public testDuck: Duck;
 
     constructor(public game: Game, size: number = 40) {
@@ -18,28 +20,28 @@ export class TestScene {
         light.intensity = 1;
         light.groundColor = new Color3(0.1, 0.1, 0.1);
 
-        this.waterEngine = new WaterEngine(size, size, this.game);
+        this.terrainEngine = new TerrainEngine(size, size, this.game);
         this.setWidthAndHeight(size, size);
         
-        this.waterEngine.neighbourize();
+        this.terrainEngine.neighbourize();
 
-        game.camera.target.copyFromFloats(this.waterEngine.width / 2, this.waterEngine.height / 2, 0);
+        game.camera.target.copyFromFloats(this.terrainEngine.width / 2, this.terrainEngine.height / 2, 0);
         game.camera.radius = 50;
         game.camera.alpha = - Math.PI * 0.5;
         game.camera.beta = Math.PI * 0.5;
 
-        this.waterEngine.initializeRockGenerator().then(() => {
-            this.waterEngine.redrawRocks();
+        this.terrainEngine.initializeRockGenerator().then(() => {
+            this.terrainEngine.redrawRocks();
         });
 
-        this.waterEngine.redraw();
+        this.terrainEngine.waterEngine.redraw();
 
-        let mapEditInput = new MapEditInput(game, this.waterEngine);
+        let mapEditInput = new MapEditInput(game, this.terrainEngine);
         mapEditInput.connect();
 
         game.scene.onBeforeRenderObservable.add(this._update);
 
-        this.testDuck = new Duck("duck", game, this.waterEngine);
+        this.testDuck = new Duck("duck", game, this.terrainEngine);
 
         document.body.querySelector("#brush-reset-s")?.addEventListener("click", () => {
             this.setWidthAndHeight(20, 20);
@@ -53,111 +55,112 @@ export class TestScene {
     }
 
     public _update = () => {
-        this.waterEngine.update();
-        this.waterEngine.update();
+        this.terrainEngine.update();
 
-        this.waterEngine.redraw();
-    }
-
-    public dispose() {
-        this.waterEngine.dispose();
-        this.game.scene.onBeforeRenderObservable.removeCallback(this._update);
+        this.terrainEngine.waterEngine.redraw();
     }
 
     public setWidthAndHeight(width: number, height: number) {
-        this.waterEngine.setWidthAndHeight(width, height);
+        this.terrainEngine.setWidthAndHeight(width, height);
 
-        this.waterEngine.cells = [];
+        this.terrainEngine.cells = [];
+        this.terrainEngine.waterEngine.cells = [];
         if (false) {
             this._generateTest1();
         }
         this._generateTest2();
         
-        this.waterEngine.neighbourize();
-        this.waterEngine.redrawRocks();
+        this.terrainEngine.neighbourize();
+        this.terrainEngine.waterEngine.neighbourize();
+        this.terrainEngine.redrawRocks();
 
-        this.game.camera.target.copyFromFloats(this.waterEngine.width / 2, this.waterEngine.height / 2, 0);
-        this.game.camera.radius = Math.max(this.waterEngine.width, this.waterEngine.height) * 2;
+        this.game.camera.target.copyFromFloats(this.terrainEngine.width / 2, this.terrainEngine.height / 2, 0).scaleInPlace(CELL_SIZE);
+        this.game.camera.radius = Math.max(this.terrainEngine.width, this.terrainEngine.height) * 2;
         this.game.camera.lowerRadiusLimit = 15;
-        this.game.camera.upperRadiusLimit = Math.max(this.waterEngine.width, this.waterEngine.height) * 3;
+        this.game.camera.upperRadiusLimit = Math.max(this.terrainEngine.width, this.terrainEngine.height) * 3;
 
         if (this.testDuck) {
-            this.testDuck.position.copyFromFloats(this.waterEngine.width / 2, this.waterEngine.height / 2, 0).scaleInPlace(this.waterEngine.cellSize);
+            this.testDuck.position.copyFromFloats(this.terrainEngine.width / 2, this.terrainEngine.height / 2, 0).scaleInPlace(CELL_SIZE);
         }
     }
 
     private _generateTest1(): void {
-        for (let i = 0; i < this.waterEngine.width; i++) {
-            for (let j = 0; j < this.waterEngine.height; j++) {
-                let cell = new WaterCell(this.waterEngine, i, j);
-                if (i === 0 || i === this.waterEngine.width - 1 || j === 0 || j === this.waterEngine.height - 1) {
+        for (let i = 0; i < this.terrainEngine.width; i++) {
+            for (let j = 0; j < this.terrainEngine.height; j++) {
+                let cell = new TerrainCell(this.terrainEngine, i, j);
+                if (i === 0 || i === this.terrainEngine.width - 1 || j === 0 || j === this.terrainEngine.height - 1) {
                     cell.isSolid = true;
-                    cell.fillLevel = 1;
                 }
                 if (i === 10 && j > 2) {
                     cell.isSolid = true;
-                    cell.fillLevel = 1;
                 }
                 if (j === 20 && i < 7) {
                     cell.isSolid = true;
-                    cell.fillLevel = 1;
                 }
                 if (j === 30 && i < 7) {
                     cell.isSolid = true;
-                    cell.fillLevel = 1;
                 }
                 if (j === 15 && i > 3 && i < 10) {
                     cell.isSolid = true;
-                    cell.fillLevel = 1;
                 }
                 if (j === 25 && i > 3 && i < 10) {
                     cell.isSolid = true;
-                    cell.fillLevel = 1;
                 }
                 if (i === 15 && j < 30) {
                     cell.isSolid = true;
-                    cell.fillLevel = 1;
                 }
                 if (i === 29 && j < 7) {
                     cell.isSolid = true;
-                    cell.fillLevel = 1;
                 }
                 if (!cell.isSolid && i < 10) {
-                    cell.fillLevel = Math.random() * 0.25 + 0.75;
                 }
             }
         }
     }
 
     private _generateTest2(): void {
-        for (let i = 0; i < this.waterEngine.width; i++) {
-            for (let j = 0; j < this.waterEngine.height; j++) {
-                let cell = new WaterCell(this.waterEngine, i, j);
+        for (let i = 0; i < this.terrainEngine.width; i++) {
+            for (let j = 0; j < this.terrainEngine.height; j++) {
+                let cell = new TerrainCell(this.terrainEngine, i, j);
                 cell.isSolid = true;
-                cell.fillLevel = 1;
+                for (let ii = 0; ii < WATER_CELLS_PER_TERRAIN_CELL; ii++) {
+                    for (let jj = 0; jj < WATER_CELLS_PER_TERRAIN_CELL; jj++) {
+                        let waterCell = new WaterCell(this.terrainEngine.waterEngine, WATER_CELLS_PER_TERRAIN_CELL * i + ii, WATER_CELLS_PER_TERRAIN_CELL * j + jj);
+                        waterCell.isSolid = false;
+                    }
+                }
             }
         }
 
-        for (let n = 0; n < this.waterEngine.width / 2; n++) {
-            let i = Math.floor(Math.random() * (this.waterEngine.width - 2)) + 1;
-            let j = Math.floor(Math.random() * (this.waterEngine.height - 2)) + 1;
-            let r = Math.floor(Math.random() * this.waterEngine.width / 8 + this.waterEngine.width / 16);
-            let fill = Math.max(Math.random() - 0.25, 0);
+        for (let n = 0; n < this.terrainEngine.width / 2; n++) {
+            let i = Math.floor(Math.random() * (this.terrainEngine.width - 2)) + 1;
+            let j = Math.floor(Math.random() * (this.terrainEngine.height - 2)) + 1;
+            let r = Math.floor(Math.random() * this.terrainEngine.width / 8 + this.terrainEngine.width / 16);
             for (let di = -r; di <= r; di++) {
                 for (let dj = -r; dj <= r; dj++) {
-                    if (i + di <= 0 || i + di >= this.waterEngine.width - 1 || j + dj <= 0 || j + dj >= this.waterEngine.height - 1) {
+                    if (i + di <= 0 || i + di >= this.terrainEngine.width - 1 || j + dj <= 0 || j + dj >= this.terrainEngine.height - 1) {
                         
                     }
                     else if (di * di + dj * dj > (r + 0.5) * (r + 0.5)) {
                         
                     }
                     else {
-                        let cell = this.waterEngine.getCell(i + di, j + dj);
+                        let cell = this.terrainEngine.getCell(i + di, j + dj);
                         if (cell) {
                             cell.isSolid = false;
-                            cell.fillLevel = fill;
                         }
                     }
+                }
+            }
+        }
+
+        this.terrainEngine.syncWaterAndRocks();
+
+        for (let i = 0; i < this.terrainEngine.waterEngine.width; i++) {
+            for (let j = 0; j < this.terrainEngine.waterEngine.height; j++) {
+                let waterCell = this.terrainEngine.waterEngine.getCell(i, j);
+                if (waterCell && !waterCell.isSolid) {
+                    waterCell.fillLevel = Math.random();
                 }
             }
         }

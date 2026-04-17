@@ -1,5 +1,6 @@
 import { Vector2 } from "@babylonjs/core/Maths/math.vector";
 import type { WaterEngine } from "./WaterEngine";
+import { WATER_CELL_SIZE } from "./TerrainEngine";
 
 export class WaterCell {
 
@@ -29,7 +30,7 @@ export class WaterCell {
 
     constructor(public waterEngine: WaterEngine, public i: number, public j: number) {
         this.waterEngine.addCell(this);
-        this.emptyAnchor.set(i, j - 0.5).scaleInPlace(waterEngine.cellSize);
+        this.emptyAnchor.set(i, j - 0.5).scaleInPlace(WATER_CELL_SIZE);
     }
 
     public step(): void {
@@ -39,7 +40,7 @@ export class WaterCell {
             return;
         }
         
-        this.pressure = this.fillLevel / 5;
+        this.pressure = WATER_CELL_SIZE * this.fillLevel / 5;
         this.flowDirection.scaleInPlace(0.9);
 
         if (this.cellTop && !this.cellTop.isSolid) {
@@ -192,8 +193,8 @@ export class WaterCell {
                 if (cell) {
                     let f = cell.isSolid ? 2 : cell.fillLevel;
                     f = f / 8;
-                    this.emptyAnchor.x = this.emptyAnchor.x * (1 - f) + this.waterEngine.cellSize * cell.i * f;
-                    this.emptyAnchor.y = this.emptyAnchor.y * (1 - f) + this.waterEngine.cellSize * cell.j * f;
+                    this.emptyAnchor.x = this.emptyAnchor.x * (1 - f) + WATER_CELL_SIZE * cell.i * f;
+                    this.emptyAnchor.y = this.emptyAnchor.y * (1 - f) + WATER_CELL_SIZE * cell.j * f;
                 }
             }
         }
@@ -201,46 +202,46 @@ export class WaterCell {
         for (let i = 0; i < 3; i++) {
             let bottom = neighbours[i][0];
             if (bottom && (bottom.isSolid || bottom.fillLevel > 0.9)) {
-                this.emptyAnchor.y -= this.waterEngine.cellSize * 0.5;
+                this.emptyAnchor.y -= WATER_CELL_SIZE * 0.5;
             }
         }
         let left = neighbours[0][1];
         if (left) {
             if (left.isSolid) {
-                this.emptyAnchor.x -= this.waterEngine.cellSize * 1;
+                this.emptyAnchor.x -= WATER_CELL_SIZE * 1;
             }
             else if (left.fillLevel > 0.9) {
-                this.emptyAnchor.x -= this.waterEngine.cellSize * 0.5;
+                this.emptyAnchor.x -= WATER_CELL_SIZE * 0.5;
             }
         }
         let right = neighbours[2][1];
         if (right) {
             if (right.isSolid) {
-                this.emptyAnchor.x += this.waterEngine.cellSize * 1;
+                this.emptyAnchor.x += WATER_CELL_SIZE * 1;
             }
             else if (right.fillLevel > 0.9) {
-                this.emptyAnchor.x += this.waterEngine.cellSize * 0.5;
+                this.emptyAnchor.x += WATER_CELL_SIZE * 0.5;
             }
         }
 
         this.sqrtFillLevel = Math.sqrt(Math.min(Math.max(0, this.fillLevel), 1));
-        this.emptyAnchor.x = Math.max((this.i - 0.5) * this.waterEngine.cellSize, Math.min((this.i + 0.5) * this.waterEngine.cellSize, this.emptyAnchor.x));
-        this.emptyAnchor.y = Math.max((this.j - 0.5) * this.waterEngine.cellSize, Math.min((this.j + 0.5) * this.waterEngine.cellSize, this.emptyAnchor.y));
+        this.emptyAnchor.x = Math.max((this.i - 0.5) * WATER_CELL_SIZE, Math.min((this.i + 0.5) * WATER_CELL_SIZE, this.emptyAnchor.x));
+        this.emptyAnchor.y = Math.max((this.j - 0.5) * WATER_CELL_SIZE, Math.min((this.j + 0.5) * WATER_CELL_SIZE, this.emptyAnchor.y));
 
 
-        this.corners[0][0].set(this.i * this.sqrtFillLevel * this.waterEngine.cellSize + this.emptyAnchor.x * (1 - this.sqrtFillLevel), this.j * this.sqrtFillLevel * this.waterEngine.cellSize + this.emptyAnchor.y * (1 - this.sqrtFillLevel));
-        this.corners[0][1].set(this.i * this.sqrtFillLevel * this.waterEngine.cellSize + this.emptyAnchor.x * (1 - this.sqrtFillLevel), this.j * this.sqrtFillLevel * this.waterEngine.cellSize + this.emptyAnchor.y * (1 - this.sqrtFillLevel));
-        this.corners[1][0].set(this.i * this.sqrtFillLevel * this.waterEngine.cellSize + this.emptyAnchor.x * (1 - this.sqrtFillLevel), this.j * this.sqrtFillLevel * this.waterEngine.cellSize + this.emptyAnchor.y * (1 - this.sqrtFillLevel));
-        this.corners[1][1].set(this.i * this.sqrtFillLevel * this.waterEngine.cellSize + this.emptyAnchor.x * (1 - this.sqrtFillLevel), this.j * this.sqrtFillLevel * this.waterEngine.cellSize + this.emptyAnchor.y * (1 - this.sqrtFillLevel));
+        this.corners[0][0].set(this.i * this.sqrtFillLevel * WATER_CELL_SIZE + this.emptyAnchor.x * (1 - this.sqrtFillLevel), this.j * this.sqrtFillLevel * WATER_CELL_SIZE + this.emptyAnchor.y * (1 - this.sqrtFillLevel));
+        this.corners[0][1].set(this.i * this.sqrtFillLevel * WATER_CELL_SIZE + this.emptyAnchor.x * (1 - this.sqrtFillLevel), this.j * this.sqrtFillLevel * WATER_CELL_SIZE + this.emptyAnchor.y * (1 - this.sqrtFillLevel));
+        this.corners[1][0].set(this.i * this.sqrtFillLevel * WATER_CELL_SIZE + this.emptyAnchor.x * (1 - this.sqrtFillLevel), this.j * this.sqrtFillLevel * WATER_CELL_SIZE + this.emptyAnchor.y * (1 - this.sqrtFillLevel));
+        this.corners[1][1].set(this.i * this.sqrtFillLevel * WATER_CELL_SIZE + this.emptyAnchor.x * (1 - this.sqrtFillLevel), this.j * this.sqrtFillLevel * WATER_CELL_SIZE + this.emptyAnchor.y * (1 - this.sqrtFillLevel));
 
-        this.corners[0][0].x -= this.sqrtFillLevel * 0.5 * this.waterEngine.cellSize;
-        this.corners[0][0].y -= this.sqrtFillLevel * 0.5 * this.waterEngine.cellSize;
-        this.corners[0][1].x -= this.sqrtFillLevel * 0.5 * this.waterEngine.cellSize;
-        this.corners[0][1].y += this.sqrtFillLevel * 0.5 * this.waterEngine.cellSize;
-        this.corners[1][0].x += this.sqrtFillLevel * 0.5 * this.waterEngine.cellSize;
-        this.corners[1][0].y -= this.sqrtFillLevel * 0.5 * this.waterEngine.cellSize;
-        this.corners[1][1].x += this.sqrtFillLevel * 0.5 * this.waterEngine.cellSize;
-        this.corners[1][1].y += this.sqrtFillLevel * 0.5 * this.waterEngine.cellSize;
+        this.corners[0][0].x -= this.sqrtFillLevel * 0.5 * WATER_CELL_SIZE;
+        this.corners[0][0].y -= this.sqrtFillLevel * 0.5 * WATER_CELL_SIZE;
+        this.corners[0][1].x -= this.sqrtFillLevel * 0.5 * WATER_CELL_SIZE;
+        this.corners[0][1].y += this.sqrtFillLevel * 0.5 * WATER_CELL_SIZE;
+        this.corners[1][0].x += this.sqrtFillLevel * 0.5 * WATER_CELL_SIZE;
+        this.corners[1][0].y -= this.sqrtFillLevel * 0.5 * WATER_CELL_SIZE;
+        this.corners[1][1].x += this.sqrtFillLevel * 0.5 * WATER_CELL_SIZE;
+        this.corners[1][1].y += this.sqrtFillLevel * 0.5 * WATER_CELL_SIZE;
 
         this.visibleFillLevel = this.visibleFillLevel * 0.95 + this.fillLevel * 0.05;
         this.visibleFillLevel = this.fillLevel;

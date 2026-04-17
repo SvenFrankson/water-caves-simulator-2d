@@ -1,6 +1,7 @@
 import { Matrix } from "@babylonjs/core/Maths/math.vector";
 import type { Game } from "./Game";
 import type { WaterEngine } from "./map/WaterEngine";
+import { CELL_SIZE, WATER_CELL_SIZE, type TerrainEngine } from "./map/TerrainEngine";
 
 enum MapEditBrush {
     None,
@@ -19,7 +20,7 @@ export class MapEditInput {
     public eraserButton: HTMLButtonElement;
     public waterButton: HTMLButtonElement;
 
-    constructor(public game: Game, public waterEngine: WaterEngine) {
+    constructor(public game: Game, public terrainEngine: TerrainEngine) {
         this.rockButton = document.getElementById("brush-rock") as HTMLButtonElement;
         this.eraserButton = document.getElementById("brush-eraser") as HTMLButtonElement;
         this.waterButton = document.getElementById("brush-water") as HTMLButtonElement;
@@ -79,37 +80,41 @@ export class MapEditInput {
     private _update = () => {
         if (this.pointerIsDown) {
             let ray = this.game.scene.createPickingRay(this.game.scene.pointerX, this.game.scene.pointerY, Matrix.Identity(), this.game.camera);
-            let pickResult = this.game.scene.pickWithRay(ray, (mesh) => mesh === this.waterEngine.frame);
+            let pickResult = this.game.scene.pickWithRay(ray, (mesh) => mesh === this.terrainEngine.frame);
             if (pickResult && pickResult.hit && pickResult.pickedMesh) {
-                let i = Math.round(pickResult.pickedPoint!.x / this.waterEngine.cellSize);
-                let j = Math.round(pickResult.pickedPoint!.y / this.waterEngine.cellSize);
-                let cell = this.waterEngine.getCell(i, j);
+                let i = Math.round(pickResult.pickedPoint!.x / CELL_SIZE);
+                let j = Math.round(pickResult.pickedPoint!.y / CELL_SIZE);
+                let iWater = Math.round(pickResult.pickedPoint!.x / WATER_CELL_SIZE);
+                let jWater = Math.round(pickResult.pickedPoint!.y / WATER_CELL_SIZE);
+                let cell = this.terrainEngine.getCell(i, j);
+                let waterCell = this.terrainEngine.waterEngine.getCell(iWater, jWater);
                 if (cell) {
                     if (this.brush === MapEditBrush.Rock) {
                         if (!cell.isSolid) {
                             cell.isSolid = true;
-                            cell.fillLevel = 1;
-                            this.waterEngine.redrawRocks();
+                            this.terrainEngine.syncWaterAndRocks();
+                            this.terrainEngine.redrawRocks();
                         }
                     }
                     else if (this.brush === MapEditBrush.Eraser) {
-                        if (i > 0 && j > 0 && i < this.waterEngine.width - 1 && j < this.waterEngine.height - 1) {
+                        if (i > 0 && j > 0 && i < this.terrainEngine.width - 1 && j < this.terrainEngine.height - 1) {
                             if (cell.isSolid && this.erasingRock != 0) {
-                                cell.fillLevel = 0;
                                 cell.isSolid = false;
-                                this.waterEngine.redrawRocks();
+                                this.terrainEngine.syncWaterAndRocks();
+                                this.terrainEngine.setWaterCellFillLevel(i, j, 0);
+                                this.terrainEngine.redrawRocks();
                                 this.erasingRock = 1;
                             }
-                            else if (!cell.isSolid && this.erasingRock != 1) {
-                                cell.fillLevel = 0;
+                            else if (waterCell && !waterCell.isSolid && this.erasingRock != 1) {
+                                waterCell.fillLevel = 0;
                                 this.erasingRock = 0;
                             }
 
                         }
                     }
                     else if (this.brush === MapEditBrush.Water) {
-                        if (!cell.isSolid && cell.fillLevel < 0.001) {
-                            cell.fillLevel = 1;
+                        if (waterCell && !waterCell.isSolid && waterCell.fillLevel < 0.001) {
+                            waterCell.fillLevel = 1;
                         }
                     }
                 }

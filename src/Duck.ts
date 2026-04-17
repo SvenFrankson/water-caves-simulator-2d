@@ -5,6 +5,9 @@ import type { Game } from "./Game";
 import { registerBuiltInLoaders } from "@babylonjs/loaders/dynamic";
 import { Color3, StandardMaterial, Vector3 } from "@babylonjs/core";
 import { ColorizeVertexDataInPlace, MirrorZVertexDataInPlace, TriFlipVertexDataInPlace } from "./VertexDataUtils";
+import { CELL_SIZE, WATER_CELL_SIZE, type TerrainEngine } from "./map/TerrainEngine";
+import { CircleSquareIntersection } from "./Math2D";
+import { DrawDebugLine } from "./Debug";
 registerBuiltInLoaders();
 
 export class Duck extends Mesh {
@@ -14,20 +17,18 @@ export class Duck extends Mesh {
     public dragX = 0.5;
     public dragY = 0.5;
     
-    constructor(name: string, public game: Game, public waterEngine: WaterEngine) {
+    constructor(name: string, public game: Game, public terrainEngine: TerrainEngine) {
         super(name);
-        this.position.copyFromFloats(waterEngine.width / 2, waterEngine.height / 2, 0).scaleInPlace(waterEngine.cellSize);
+        this.position.copyFromFloats(terrainEngine.width / 2, terrainEngine.height / 2, 0).scaleInPlace(CELL_SIZE);
 
         ImportMeshAsync("meshes/duck.gltf", this.game.scene).then(data => {
             data.meshes.forEach(mesh => {
-
                 let myMesh = new Mesh(mesh.name + "_col", this.game.scene);
                 myMesh.parent = this;
                 myMesh.position.copyFromFloats(0, 0, 0);
                 myMesh.rotation.copyFromFloats(0, 0, 0);
                 myMesh.scaling.copyFromFloats(1, 1, 1);
 
-                
                 if (mesh instanceof Mesh) {
                     let vData = VertexData.ExtractFromMesh(mesh);
                     ColorizeVertexDataInPlace(vData, new Color3(1, 1, 1));
@@ -54,35 +55,53 @@ export class Duck extends Mesh {
         let dt = this.game.engine.getDeltaTime() / 1000;
         dt = Math.min(dt, 0.1);
 
-        let i = Math.round(this.position.x / this.waterEngine.cellSize);
-        let j = Math.round(this.position.y / this.waterEngine.cellSize);
-        let cell = this.waterEngine.getCell(i, j);
-        let cellAbove = cell?.cellTop;
+        let r = 0.5;
+        let i = Math.round(this.position.x / CELL_SIZE);
+        let j = Math.round(this.position.y / CELL_SIZE);
+        let cell = this.terrainEngine.getCell(i, j);
+        let iWater = Math.round(this.position.x / WATER_CELL_SIZE);
+        let jWater = Math.round((this.position.y) / WATER_CELL_SIZE);
+        let waterCell = this.terrainEngine.waterEngine.getCell(iWater, jWater);
         let flowX = 0;
         let flowY = 0;
-        if (cell) {
-            let targetY = 0;
+        if (cell && waterCell) {
+            let inWater = false;
+            let dY = -1;
             let fill = 0;
-            if (!cell.isSolid && cell.fillLevel > 0.0001) {
-                targetY = Math.max(targetY, (cell.corners[0][1].y + cell.corners[1][1].y) / 2);
-                fill = Math.max(fill, cell.fillLevel);
-                flowX = cell.flowDirection.x;
-                flowY = cell.flowDirection.y;
 
-                //targetY = Math.max(targetY, cell.y - 0.5 + cell.visibleFillLevel);
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    let neighbour = waterCell.neighbours[i][j];
+                    if (neighbour && neighbour.visibleFillLevel > 0.0001) {
+                        let intersection = CircleSquareIntersection(
+                            this.position.x,
+                            this.position.y + 0.5,
+                            r,
+                            neighbour.i * WATER_CELL_SIZE,
+                            neighbour.j * WATER_CELL_SIZE,
+                            WATER_CELL_SIZE
+                        );
+                        if (intersection) {
+                            let f = intersection.penetration / r;
+                            if (intersection.penetration > r * 0.5) {
+                                dY = Math.max(dY, (neighbour.corners[0][1].y + neighbour.corners[1][1].y) / 2 - this.position.y);
+                                fill += neighbour.visibleFillLevel * f;
+                            }
+                            flowX += neighbour.flowDirection.x * f;
+                            flowY += neighbour.flowDirection.y * f;
+                            inWater = true;
+                            DrawDebugLine(
+                                new Vector3(neighbour.i * WATER_CELL_SIZE, neighbour.j * WATER_CELL_SIZE, 2),
+                                new Vector3(neighbour.i * WATER_CELL_SIZE, neighbour.j * WATER_CELL_SIZE, -2),
+                                2,
+                            )
+                        }
+                    }
+                }
             }
-            if (cellAbove && !cellAbove.isSolid && cellAbove.fillLevel > 0.0001) {
-                targetY = Math.max(targetY, (cellAbove.corners[0][1].y + cellAbove.corners[1][1].y) / 2);
-                fill = Math.max(fill, cellAbove.fillLevel);
-                if (Math.abs(cellAbove.flowDirection.x) > Math.abs(flowX)) {
-                    flowX = cellAbove.flowDirection.x;
-                }
-                if (Math.abs(cellAbove.flowDirection.y) > Math.abs(flowY)) {
-                    flowY = cellAbove.flowDirection.y;
-                }
 
-                //targetY = Math.max(targetY, cellAbove.y - 0.5 + cellAbove.visibleFillLevel);
-            }
+            fill = Math.min(fill, 1);
+
             /*
             DrawDebugLine(
                 new Vector3(cell.x, targetY, 2),
@@ -97,10 +116,13 @@ export class Duck extends Mesh {
             )
             */
             
-            let dY = targetY - this.position.y;
+            
             if (dY > 0) {
-                dY = Math.min(dY, 0.5);
-                this.velocity.y += fill * 100 * dY * dt;
+                dY = Math.min(dY, 1);
+                this.velocity.y += 60 * dY * dt;
+            }
+
+            if (inWater) {
                 this.dragX = 2;
                 this.dragY = 5;
             }
@@ -108,46 +130,33 @@ export class Duck extends Mesh {
                 this.dragX = this.dragX * 0.5 + 0.01 * 0.5;
                 this.dragY = this.dragY * 0.5 + 0.01 * 0.5;
             }
+            
             let dragForce = new Vector3(this.velocity.x * -this.dragX, this.velocity.y * -this.dragY, 0);
             this.velocity.addInPlace(dragForce.scale(1 * dt));
             this.velocity.addInPlace(new Vector3(0, -9.81, 0).scale(1 * dt));
-            this.velocity.x += 200 * flowX * dt;
-            this.velocity.y += 200 * flowY * dt;
+            this.velocity.x += 100 * flowX * dt;
+            this.velocity.y += 100 * flowY * dt;
 
             this.lateralVelocity = this.lateralVelocity * 0.9 + this.velocity.x * 0.1;
 
             this.rotation.y += this.velocity.length() * 0.5 * dt;
             this.rotation.z = - this.lateralVelocity * 0.1;
 
-            let r = 0.5;
-            let s = 0.6;
             for (let i = 0; i < 3; i++) {
                 for (let j = 0; j < 3; j++) {
                     let neighbour = cell.neighbours[i][j];
                     if (neighbour && neighbour.isSolid) {
-                        let dx = this.position.x - neighbour.i * this.waterEngine.cellSize;
-                        let dy = (this.position.y + 0.5) - neighbour.j * this.waterEngine.cellSize;
-                        if (Math.abs(dx) < r + s || Math.abs(dy) < r + s) {
-                            let projX = Math.min(neighbour.i * this.waterEngine.cellSize + r, Math.max(neighbour.i * this.waterEngine.cellSize - r, this.position.x));
-                            let projY = Math.min(neighbour.j * this.waterEngine.cellSize + r, Math.max(neighbour.j * this.waterEngine.cellSize - r, this.position.y + 0.5));
-                            let d = Math.sqrt((this.position.x - projX) ** 2 + (this.position.y + 0.5 - projY) ** 2);
-                            if (d < r) {
-                                let overlap = r - d;
-                                let norm: Vector3;
-                                if (d < r / 10) {
-                                    norm = new Vector3(this.position.x - neighbour.i * this.waterEngine.cellSize, this.position.y + 0.5 - neighbour.j * this.waterEngine.cellSize, 0).normalize();
-                                }
-                                else {
-                                    norm = new Vector3(this.position.x - projX, this.position.y + 0.5 - projY, 0).normalize();
-                                }
-                                let dot = this.velocity.x * norm.x + this.velocity.y * norm.y;
-                                if (dot < 0) {
-                                    this.velocity.x = this.velocity.x - 2 * dot * norm.x;
-                                    this.velocity.y = this.velocity.y - 2 * dot * norm.y;
-                                    this.velocity.scaleInPlace(0.5);
-                                    this.position.x += norm.x * overlap;
-                                    this.position.y += norm.y * overlap;
-                                }
+                        let intersection = CircleSquareIntersection(this.position.x, this.position.y + 0.5, r, neighbour.i * CELL_SIZE, neighbour.j * CELL_SIZE, CELL_SIZE);
+                        if (intersection) {
+                            let overlap = intersection.penetration;
+                            let norm = new Vector3(intersection.nX, intersection.nY, 0);
+                            let dot = this.velocity.x * norm.x + this.velocity.y * norm.y;
+                            if (dot < 0) {
+                                this.velocity.x = this.velocity.x - 2 * dot * norm.x;
+                                this.velocity.y = this.velocity.y - 2 * dot * norm.y;
+                                this.velocity.scaleInPlace(0.5);
+                                this.position.x += norm.x * overlap;
+                                this.position.y += norm.y * overlap;
                             }
                         }
                     }

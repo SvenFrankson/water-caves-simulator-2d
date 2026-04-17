@@ -8,6 +8,8 @@ import { EaseOutCirc } from "../Easing";
 import { RockGenerator } from "./RockGenerator";
 import type { Game } from "../Game";
 import { MergeVertexDatas } from "../VertexDataUtils";
+import { CELL_SIZE, WATER_CELL_SIZE } from "./TerrainEngine";
+import { Engine } from "@babylonjs/core";
 
 export class WaterEngineVertex {
 
@@ -17,7 +19,7 @@ export class WaterEngineVertex {
     public pressure: number = 0.5;
 
     constructor(public x: number, public y: number, public waterEngine?: WaterEngine) {
-        this.position.set(x, y, 0).scaleInPlace(waterEngine ? waterEngine.cellSize : 1);
+        this.position.set(x, y, 0).scaleInPlace(WATER_CELL_SIZE);
     }
 
     public connectTo(vertex: WaterEngineVertex) {
@@ -49,64 +51,35 @@ export class WaterEngineVertex {
 
 export class WaterEngine {
 
-    public cellSize: number = 0.5;
-
-    public frame: Mesh;
     public cells: WaterCell[][] = [];
     public contourLevel: number = 0.5;
 
-    public rockMaterial: StandardMaterial;
-    public frameMaterial: StandardMaterial;
     public waterMaterial: StandardMaterial;
     
-    public lineMesh?: Mesh;
-    public rockMesh?: Mesh;
     public waterMesh?: Mesh;
 
     public vertices: WaterEngineVertex[][] = [];
     public threshold: number = 0.0001;
-
-    public rockGenerator: RockGenerator;
     
     constructor(public width: number = 20, public height: number = 20, public game: Game) {
-        this.rockMaterial = new StandardMaterial("solid-material");
-        this.rockMaterial.diffuseColor.set(0.7, 0.7, 0.7);
-        this.rockMaterial.specularColor.set(0.1, 0.1, 0.1);
-
-        this.frameMaterial = new StandardMaterial("solid-material");
-        this.frameMaterial.diffuseColor.set(0.2, 0.2, 0.2);
-
         this.waterMaterial = new StandardMaterial("water-material");
         this.waterMaterial.diffuseColor.set(1, 1, 1);
         this.waterMaterial.specularColor.set(0.1, 0.1, 0.1);
-        this.waterMaterial.alpha = 0.5;
-
-        this.frame = MeshBuilder.CreateBox("frame", { width: 1, height: 1, depth: 1 });
-        this.frame.material = this.frameMaterial;
+        this.waterMaterial.alpha = 0.9;
 
         this.setWidthAndHeight(width, height);
 
-        this.rockMesh = new Mesh("rock-mesh");
-        this.rockMesh.material = this.rockMaterial;
-
         this.waterMesh = new Mesh("water-mesh");
         this.waterMesh.material = this.waterMaterial;
-        
-        this.rockGenerator = new RockGenerator(this, this.game);
     }
 
     public dispose(): void {
-        this.frame.dispose();
-        this.rockMesh?.dispose();
         this.waterMesh?.dispose();
     }
 
     public setWidthAndHeight(width: number, height: number): void {
         this.width = width;
         this.height = height;
-
-        this.frame.position.set(this.cellSize * (this.width / 2 - 0.5), this.cellSize * (this.height / 2 - 0.5), 0.5 + 0.6);
-        this.frame.scaling.set(this.cellSize * this.width, this.cellSize * this.height, 1);
 
         this.vertices = [];
         for (let i = 0; i <= this.width; i++) {
@@ -117,17 +90,6 @@ export class WaterEngine {
         }
     }
 
-    public async initializeRockGenerator(): Promise<void> {   
-        await this.rockGenerator.init();
-    }
-
-    public redrawRocks(): void {   
-        if (this.rockGenerator.initialized) {
-            let vertexData = this.rockGenerator.generateRockVertexData();
-            vertexData.applyToMesh(this.rockMesh!);
-        }
-    }
-
     public addCell(cell: WaterCell) {
         if (!this.cells[cell.i]) {
             this.cells[cell.i] = [];
@@ -135,9 +97,9 @@ export class WaterEngine {
         this.cells[cell.i][cell.j] = cell;
     }
 
-    public getCell(x: number, y: number): WaterCell | undefined {
-        if (this.cells[x]) {
-            return this.cells[x][y];
+    public getCell(i: number, j: number): WaterCell | undefined {
+        if (this.cells[i]) {
+            return this.cells[i][j];
         }
         return undefined;
     }
@@ -367,109 +329,6 @@ export class WaterEngine {
         }
     }
 
-    public drawShapeFromCell(cell: WaterCell) {
-        let oneVertex: WaterEngineVertex | undefined = undefined;
-        cell.drawn = true;
-
-        let cellTop = this.cells[cell.i][cell.j + 1];
-        let cellRight = this.cells[cell.i + 1][cell.j];
-        let cellBottom = this.cells[cell.i][cell.j - 1];
-        let cellLeft = this.cells[cell.i - 1][cell.j];
-
-        if (!cellTop || cellTop.isSolid || cellTop.fillLevel < 0.001) {
-            let vertex01 = this.vertices[cell.i][cell.j + 1];
-            let vertex11 = this.vertices[cell.i + 1][cell.j + 1];
-            oneVertex = Math.random() < 0.5 ? vertex01 : vertex11;
-            vertex01.connectTo(vertex11);
-        }
-        if (!cellRight || cellRight.isSolid || cellRight.fillLevel < 0.001) {
-            let vertex10 = this.vertices[cell.i + 1][cell.j];
-            let vertex11 = this.vertices[cell.i + 1][cell.j + 1];
-            oneVertex = Math.random() < 0.5 ? vertex10 : vertex11;
-            vertex10.connectTo(vertex11);
-        }
-        if (!cellBottom || cellBottom.isSolid || cellBottom.fillLevel < 0.001) {
-            let vertex00 = this.vertices[cell.i][cell.j];
-            let vertex10 = this.vertices[cell.i + 1][cell.j];
-            oneVertex = Math.random() < 0.5 ? vertex00 : vertex10;
-            vertex00.connectTo(vertex10);
-        }
-        if (!cellLeft || cellLeft.isSolid || cellLeft.fillLevel < 0.001) {
-            let vertex00 = this.vertices[cell.i][cell.j];
-            let vertex01 = this.vertices[cell.i][cell.j + 1];
-            oneVertex = Math.random() < 0.5 ? vertex00 : vertex01;
-            vertex00.connectTo(vertex01);
-        }
-
-        if (cellTop && !cellTop.drawn) {
-            this.drawShapeFromCell(cellTop);
-        }
-        if (cellRight && !cellRight.drawn) {
-            this.drawShapeFromCell(cellRight);
-        }
-        if (cellBottom && !cellBottom.drawn) {
-            this.drawShapeFromCell(cellBottom);
-        }
-        if (cellLeft && !cellLeft.drawn) {
-            this.drawShapeFromCell(cellLeft);
-        }
-
-        return oneVertex;
-    }
-
-    public redraw2() {
-        this.updateVertices();
-
-        for (let i = 0; i < this.width; i++) {
-            for (let j = 0; j < this.height; j++) {
-                const cell = this.getCell(i, j);
-                if (cell) {
-                    cell.drawn = false;
-                    if (cell.isSolid) {
-                        cell.drawn = true;
-                    }
-                    if (cell.fillLevel < 0.001) {
-                        cell.drawn = true;
-                    }
-                }
-            }
-        }
-        
-        
-        let lineSystemPoints: Vector3[][] = [];
-        
-        for (let i = 0; i < this.width; i++) {
-            for (let j = 0; j < this.height; j++) {
-                const cell = this.getCell(i, j);
-                if (cell && !cell.drawn) {
-                    let vertex = this.drawShapeFromCell(cell);
-
-                    if (vertex) {
-                        let path = [vertex];
-                        let other: WaterEngineVertex | undefined = vertex.connections[0];
-                        while (other && other !== vertex) {
-                            path.push(other);
-                            other = other.connections.find(v => v !== path[path.length - 2]);
-                        }
-                        path.push(vertex);
-                        if (path.length > 2) {
-                            lineSystemPoints.push(path.map(v => v.position));
-                        }
-                    }
-
-                    this.disconnectAllVertices();
-                }
-            }
-        }
-        
-        if (this.lineMesh) {
-            this.lineMesh.dispose();
-        }
-        this.lineMesh = MeshBuilder.CreateLineSystem("line-system", { lines: lineSystemPoints });
-        this.lineMesh.position.z = - 0.05;
-        
-    }
-
     public updateVertices() {
         let threshold = this.threshold / 10;
 
@@ -497,8 +356,8 @@ export class WaterEngine {
                 }
 
                 if (needDraw === 0) {
-                    vertex.position.x = vertex.position.x * 0.95 + this.cellSize * (i - 0.5) * 0.05;
-                    vertex.position.y = vertex.position.y * 0.95 + this.cellSize * (j - 0.5) * 0.05;
+                    vertex.position.x = vertex.position.x * 0.95 + WATER_CELL_SIZE * (i - 0.5) * 0.05;
+                    vertex.position.y = vertex.position.y * 0.95 + WATER_CELL_SIZE * (j - 0.5) * 0.05;
                     continue;
                 }
                 if (needDraw === 15) {
@@ -535,148 +394,6 @@ export class WaterEngine {
                 }
             }
         }
-    }
-
-    public redrawLines() {
-        let lineSystemPoints: Vector3[][] = [];
-
-        if (this.lineMesh) {
-            let mesh = this.lineMesh;
-            mesh.dispose();
-        }
-
-        for (let i = 0; i <= this.width; i++) {
-            for (let j = 0; j <= this.height; j++) {
-                let cell00 = this.getCell(i, j);
-                let cell10 = this.getCell(i + 1, j);
-                let cell01 = this.getCell(i, j + 1);
-                let cell11 = this.getCell(i + 1, j + 1);
-
-                if (cell00 && !cell00.isSolid) {
-                    let pFlowStart = new Vector3(i, j, 0);
-                    let pFlowEnd = pFlowStart.add(new Vector3(cell00.flowDirection.x, cell00.flowDirection.y, 0).scale(0.5));
-                    lineSystemPoints.push([pFlowStart, pFlowEnd]);
-                }
-
-                const isoLevel = Math.max(0, Math.min(1, this.contourLevel));
-                const v00 = cell00 && !cell00.isSolid ? cell00.fillLevel : 0;
-                const v10 = cell10 && !cell10.isSolid ? cell10.fillLevel : 0;
-                const v01 = cell01 && !cell01.isSolid ? cell01.fillLevel : 0;
-                const v11 = cell11 && !cell11.isSolid ? cell11.fillLevel : 0;
-
-                const tB = Math.abs(v10 - v00) > 1e-6 ? Math.max(0, Math.min(1, (isoLevel - v00) / (v10 - v00))) : 0.5;
-                const tT = Math.abs(v11 - v01) > 1e-6 ? Math.max(0, Math.min(1, (isoLevel - v01) / (v11 - v01))) : 0.5;
-                const tL = Math.abs(v01 - v00) > 1e-6 ? Math.max(0, Math.min(1, (isoLevel - v00) / (v01 - v00))) : 0.5;
-                const tR = Math.abs(v11 - v10) > 1e-6 ? Math.max(0, Math.min(1, (isoLevel - v10) / (v11 - v10))) : 0.5;
-
-                const pB = new Vector3(i + tB, j, 0);
-                const pT = new Vector3(i + tT, j + 1, 0);
-                const pL = new Vector3(i, j + tL, 0);
-                const pR = new Vector3(i + 1, j + tR, 0);
-
-                let r = 0;
-                if (v00 > isoLevel) {
-                    r += 1;
-                }
-                if (v10 > isoLevel) {
-                    r += 2;
-                }
-                if (v01 > isoLevel) {
-                    r += 4;
-                }
-                if (v11 > isoLevel) {
-                    r += 8;
-                }
-                
-                if (r === 0 || r === 15) {
-                    continue;
-                }
-                if (r === 1 || r === 14) {
-                    lineSystemPoints.push([pB, pL]);
-                }
-                if (r === 2 || r === 13) {
-                    lineSystemPoints.push([pB, pR]);
-                }
-                if (r === 3 || r === 12) {
-                    lineSystemPoints.push([pL, pR]);
-                }
-                if (r === 4 || r === 11) {
-                    lineSystemPoints.push([pT, pL]);
-                }
-                if (r === 5 || r === 10) {
-                    lineSystemPoints.push([pB, pT]);
-                }
-                if (r === 6 || r === 9) {
-                    if (r === 6) {
-                        lineSystemPoints.push([pB, pR]);
-                        lineSystemPoints.push([pT, pL]);
-                    }
-                    else {
-                        lineSystemPoints.push([pB, pL]);
-                        lineSystemPoints.push([pT, pR]);
-                    }
-                }
-                if (r === 7 || r === 8) {
-                    lineSystemPoints.push([pT, pR]);
-                }
-            }
-        }
-
-        this.lineMesh = MeshBuilder.CreateLineSystem("line-system", { lines: lineSystemPoints });
-        this.lineMesh.position.z = - 0.05;
-    }
-
-    public redrawLines2() {
-        let lineSystemPoints: Vector3[][] = [];
-
-        let threshold = 0.001;
-
-        if (this.lineMesh) {
-            let mesh = this.lineMesh;
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    mesh.dispose();
-                });
-            });
-        }
-
-        this.updateVertices();
-
-        for (let i = 0; i < this.width; i++) {
-            for (let j = 0; j < this.height; j++) {
-                let cell = this.getCell(i, j);
-                if (cell && !cell.isSolid && cell.visibleFillLevel >= threshold) {
-                    
-                    let neighbours: (WaterCell | undefined)[][] = [
-                        [this.getCell(cell.i - 1, cell.j - 1), this.getCell(cell.i - 1, cell.j), this.getCell(cell.i - 1, cell.j + 1)],
-                        [this.getCell(cell.i, cell.j - 1), /* this cell */ this.getCell(cell.i, cell.j), this.getCell(cell.i, cell.j + 1)],
-                        [this.getCell(cell.i + 1, cell.j - 1), this.getCell(cell.i + 1, cell.j), this.getCell(cell.i + 1, cell.j + 1)],
-                    ];
-                    let left = neighbours[0][1];
-                    if (!left || left.isSolid || left.visibleFillLevel < threshold) {
-                        lineSystemPoints.push([this.vertices[i][j].position, this.vertices[i][j + 1].position]);
-                    }
-
-                    let right = neighbours[2][1];
-                    if (!right || right.isSolid || right.visibleFillLevel < threshold) {
-                        lineSystemPoints.push([this.vertices[i + 1][j].position, this.vertices[i + 1][j + 1].position]);
-                    }
-
-                    let top = neighbours[1][2];
-                    if (!top || top.isSolid || top.visibleFillLevel < threshold) {
-                        lineSystemPoints.push([this.vertices[i][j + 1].position, this.vertices[i + 1][j + 1].position]);
-                    }
-
-                    let bottom = neighbours[1][0];
-                    if (!bottom || bottom.isSolid || bottom.visibleFillLevel < threshold) {
-                        lineSystemPoints.push([this.vertices[i][j].position, this.vertices[i + 1][j].position]);
-                    }
-                }
-            }
-        }
-
-        this.lineMesh = MeshBuilder.CreateLineSystem("line-system", { lines: lineSystemPoints });
-        this.lineMesh.position.z = - 0.05;
     }
 
     private _ticTac: number = 0;

@@ -164,5 +164,15 @@ export class TestScene {
                 }
             }
         }
+
+        let sink = this.terrainEngine.waterEngine.getCell(2, 2);
+        if (sink) {
+            sink.sinkRate = 5;
+        }
+        let fill = this.terrainEngine.waterEngine.getCell(this.terrainEngine.waterEngine.width - 3, this.terrainEngine.waterEngine.height - 3);
+        if (fill) {
+            fill.fillRate = 5;
+        }
+        this.terrainEngine.waterEngine.redrawDebugWaterCellsMesh();
     }
 }

@@ -246,9 +246,9 @@ export function ColorizeVertexDataInPlace(data: VertexData, color: Color3, color
     if (colorToReplace && data.colors) {
         colors = [...data.colors];
     }
-    if (data.positions && data.colors) {
+    if (data.positions) {
         for (let i = 0; i < data.positions.length / 3; i++) {
-            if (colorToReplace) {
+            if (colorToReplace && data.colors) {
                 let r = data.colors[4 * i];
                 let g = data.colors[4 * i + 1];
                 let b = data.colors[4 * i + 2];

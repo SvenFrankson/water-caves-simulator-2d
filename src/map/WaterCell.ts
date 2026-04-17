@@ -13,6 +13,9 @@ export class WaterCell {
     public emptyAnchor: Vector2 = Vector2.Zero();
     public corners: Vector2[][] = [[Vector2.Zero(), Vector2.Zero()], [Vector2.Zero(), Vector2.Zero()]];
     public drawn: boolean = false;
+    
+    public fillRate: number = 0;
+    public sinkRate: number = 0;
 
     public neighbours: (WaterCell | undefined)[][] = [[], [], []];
     public get cellTop(): WaterCell | undefined {
@@ -33,7 +36,12 @@ export class WaterCell {
         this.emptyAnchor.set(i, j - 0.5).scaleInPlace(WATER_CELL_SIZE);
     }
 
+    public gloup = 0;
     public step(): void {
+        let dt = this.waterEngine.game.engine.getDeltaTime() / 1000;
+        dt = Math.min(dt, 0.1);
+        dt = dt / this.waterEngine.updatesPerFrame;
+        this.gloup += dt;
 
         if (this.isSolid) {
             this.visibleFillLevel = 1;
@@ -41,7 +49,7 @@ export class WaterCell {
         }
         
         this.pressure = WATER_CELL_SIZE * this.fillLevel / 5;
-        this.flowDirection.scaleInPlace(0.9);
+        this.flowDirection.scaleInPlace(0.95);
 
         if (this.cellTop && !this.cellTop.isSolid) {
             this.pressure = this.pressure + this.cellTop.pressure;
@@ -97,7 +105,7 @@ export class WaterCell {
 
         let belowCell = this.waterEngine.getCell(this.i, this.j - 1);
         if (belowCell && !belowCell.isSolid) {
-            let flowRate = 0.5;
+            let flowRate = 100 * dt;
             if (belowCell.fillLevel < 0.001) {
                 if (this.cellTop && this.cellTop.fillLevel > this.fillLevel) {
                     //flowRate = 0;
@@ -109,12 +117,12 @@ export class WaterCell {
             belowCell.fillLevel += transfer;
         }
 
-        let belowIsFilledOrSolid = !belowCell || belowCell.isSolid || belowCell.fillLevel >= 0.9;
+        let belowIsFilledOrSolid = !belowCell || belowCell.isSolid || belowCell.fillLevel >= 0.5;
 
         let tic = () => {
             if (this.cellLeft && !this.cellLeft.isSolid && belowIsFilledOrSolid) {
                 if (this.cellLeft.pressure < this.pressure && this.fillLevel > this.cellLeft.fillLevel * 0.9) {
-                    let transfer = (this.pressure - this.cellLeft.pressure);
+                    let transfer = (this.pressure - this.cellLeft.pressure) * 200 * dt;
                     transfer = Math.max(0, Math.min(transfer, (this.fillLevel - this.cellLeft.fillLevel * 0.9) / 2));
                     this.fillLevel -= transfer;
                     this.cellLeft.fillLevel += transfer;
@@ -126,7 +134,7 @@ export class WaterCell {
         let tac = () => {
             if (this.cellRight && !this.cellRight.isSolid && belowIsFilledOrSolid) {
                 if (this.cellRight.pressure < this.pressure && this.fillLevel > this.cellRight.fillLevel * 0.9) {
-                    let transfer = (this.pressure - this.cellRight.pressure);
+                    let transfer = (this.pressure - this.cellRight.pressure) * 200 * dt;
                     transfer = Math.max(0, Math.min(transfer, (this.fillLevel - this.cellRight.fillLevel * 0.9) / 2));
                     this.fillLevel -= transfer;
                     this.cellRight.fillLevel += transfer;
@@ -135,14 +143,8 @@ export class WaterCell {
             }
         }
 
-        if (Math.random() < 0.5) {
-            tic();
-            tac();
-        }
-        else {
-            tac();
-            tic();
-        }
+        tic();
+        tac();
         
         if (this.fillLevel > 1) {
             let overflow = this.fillLevel - 1;
@@ -188,7 +190,7 @@ export class WaterCell {
         ];
 
         for (let i = 0; i < 3; i++) {
-            for (let j = 0; j < 3; j++) {
+            for (let j = 0; j < 2; j++) {
                 let cell = neighbours[i][j];
                 if (cell) {
                     let f = cell.isSolid ? 2 : cell.fillLevel;
@@ -224,6 +226,10 @@ export class WaterCell {
             }
         }
 
+        if (this.fillRate > 0) {
+            this.emptyAnchor.copyFromFloats(this.i * WATER_CELL_SIZE, this.j * WATER_CELL_SIZE);
+        }
+
         this.sqrtFillLevel = Math.sqrt(Math.min(Math.max(0, this.fillLevel), 1));
         this.emptyAnchor.x = Math.max((this.i - 0.5) * WATER_CELL_SIZE, Math.min((this.i + 0.5) * WATER_CELL_SIZE, this.emptyAnchor.x));
         this.emptyAnchor.y = Math.max((this.j - 0.5) * WATER_CELL_SIZE, Math.min((this.j + 0.5) * WATER_CELL_SIZE, this.emptyAnchor.y));
@@ -249,6 +255,17 @@ export class WaterCell {
 
         if (this.flowDirection.length() > 1) {
             this.flowDirection.normalize();
+        }
+
+        if (this.sinkRate > 0) {
+            let sinkRateRate = this.sinkRate * (1 + Math.sin(this.gloup * 7) * 0.8);
+            let sinkAmount = Math.min(this.fillLevel, sinkRateRate * dt);
+            this.fillLevel -= sinkAmount;
+        }
+        if (this.fillRate > 0) {
+            let randomFillRate = this.fillRate * (1 + Math.sin(this.gloup * 7) * 0.8);
+            let fillAmount = Math.min(1 - this.fillLevel, randomFillRate * dt);
+            this.fillLevel += fillAmount;
         }
     }
 }

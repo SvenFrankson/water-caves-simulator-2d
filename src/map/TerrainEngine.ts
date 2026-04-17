@@ -130,6 +130,8 @@ export class TerrainEngine {
     }
 
     public update(): void {
-        this.waterEngine.update();
+        for (let n = 0; n < this.waterEngine.updatesPerFrame; n++) {
+            this.waterEngine.update();
+        }
     }
 }

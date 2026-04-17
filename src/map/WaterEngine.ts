@@ -7,9 +7,9 @@ import { WaterCell } from "./WaterCell";
 import { EaseOutCirc } from "../Easing";
 import { RockGenerator } from "./RockGenerator";
 import type { Game } from "../Game";
-import { MergeVertexDatas } from "../VertexDataUtils";
+import { ColorizeVertexDataInPlace, MergeVertexDatas, MirrorZVertexDataInPlace, RotateAngleAxisVertexDataInPlace, TriFlipVertexDataInPlace } from "../VertexDataUtils";
 import { CELL_SIZE, WATER_CELL_SIZE } from "./TerrainEngine";
-import { Engine } from "@babylonjs/core";
+import { Color3, Engine, ImportMeshAsync } from "@babylonjs/core";
 
 export class WaterEngineVertex {
 
@@ -55,11 +55,17 @@ export class WaterEngine {
     public contourLevel: number = 0.5;
 
     public waterMaterial: StandardMaterial;
+    public sinkMaterial: StandardMaterial;
     
     public waterMesh?: Mesh;
+    public debugWaterCellMesh?: Mesh;
 
     public vertices: WaterEngineVertex[][] = [];
     public threshold: number = 0.0001;
+
+    public updatesPerFrame: number = 2;
+
+    public plumbingCurbVertexData?: VertexData;
     
     constructor(public width: number = 20, public height: number = 20, public game: Game) {
         this.waterMaterial = new StandardMaterial("water-material");
@@ -67,14 +73,21 @@ export class WaterEngine {
         this.waterMaterial.specularColor.set(0.1, 0.1, 0.1);
         this.waterMaterial.alpha = 0.9;
 
+        this.sinkMaterial = new StandardMaterial("solid-material");
+        this.sinkMaterial.diffuseColor.set(0.3, 1, 0.6);
+        this.sinkMaterial.specularColor.set(0.3, 0.3, 0.3);
+
         this.setWidthAndHeight(width, height);
 
         this.waterMesh = new Mesh("water-mesh");
         this.waterMesh.material = this.waterMaterial;
+        
+        this.debugWaterCellMesh = new Mesh("debug-water-cell-mesh");
     }
 
     public dispose(): void {
         this.waterMesh?.dispose();
+        this.debugWaterCellMesh?.dispose();
     }
 
     public setWidthAndHeight(width: number, height: number): void {
@@ -126,6 +139,60 @@ export class WaterEngine {
     private _pts: Vector3[] = [Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero()];
     private _visibilities: number[] = [0, 0, 0, 0];
     private _pressures: number[] = [0, 0, 0, 0];
+
+    private async _initializePlumbingVertexData(): Promise<void> {
+        if (!this.plumbingCurbVertexData) {
+            return new Promise((resolve) => {
+                ImportMeshAsync("meshes/plumbing.gltf", this.game.scene).then(data => {
+                    data.meshes.forEach(mesh => {
+                        if (mesh instanceof Mesh && mesh.name === "0-curb") {
+                            let vData = VertexData.ExtractFromMesh(mesh);
+                            ColorizeVertexDataInPlace(vData, new Color3(1, 1, 1));
+                            MirrorZVertexDataInPlace(vData);
+                            TriFlipVertexDataInPlace(vData);
+                            RotateAngleAxisVertexDataInPlace(vData, Math.PI, new Vector3(0, 1, 0));
+                            
+                            this.plumbingCurbVertexData = vData;
+
+                            console.log(this.plumbingCurbVertexData)
+                        }
+
+                        mesh.dispose(true);
+                    });
+                    resolve();
+                });
+            });
+        }
+    }
+
+    public async redrawDebugWaterCellsMesh(): Promise<void> {
+        this.debugWaterCellMesh?.dispose();
+        this.debugWaterCellMesh = new Mesh("debug-water-cell-mesh");
+
+        await this._initializePlumbingVertexData();
+
+        for (let i = 0; i < this.width; i++) {
+            for (let j = 0; j < this.height; j++) {
+                let cell = this.getCell(i, j);
+                if (cell) {
+                    if (cell.sinkRate > 0) {
+                        let box = MeshBuilder.CreateBox("sink-box", { width : WATER_CELL_SIZE * 0.5, height: WATER_CELL_SIZE * 0.5, depth: CELL_SIZE * 2 }, this.game.scene);
+                        this.plumbingCurbVertexData?.applyToMesh(box);
+                        box.position.set(cell.i * WATER_CELL_SIZE, cell.j * WATER_CELL_SIZE, 0);
+                        box.parent = this.debugWaterCellMesh;
+                        box.material = this.sinkMaterial;
+                    }
+                    else if (cell.fillRate > 0) {
+                        let box = MeshBuilder.CreateBox("fill-box", { width : WATER_CELL_SIZE * 0.5, height: WATER_CELL_SIZE * 0.5, depth: CELL_SIZE * 2 }, this.game.scene);
+                        this.plumbingCurbVertexData?.applyToMesh(box);
+                        box.position.set(cell.i * WATER_CELL_SIZE, cell.j * WATER_CELL_SIZE, 0);
+                        box.parent = this.debugWaterCellMesh;
+                        box.material = this.sinkMaterial;
+                    }
+                }
+            }
+        }
+    }
 
     public redraw() {
         this.updateVertices();

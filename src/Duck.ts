@@ -90,11 +90,6 @@ export class Duck extends Mesh {
                             flowX += neighbour.flowDirection.x * f;
                             flowY += neighbour.flowDirection.y * f;
                             inWater = true;
-                            DrawDebugLine(
-                                new Vector3(neighbour.i * WATER_CELL_SIZE, neighbour.j * WATER_CELL_SIZE, 2),
-                                new Vector3(neighbour.i * WATER_CELL_SIZE, neighbour.j * WATER_CELL_SIZE, -2),
-                                2,
-                            )
                         }
                     }
                 }
@@ -123,8 +118,8 @@ export class Duck extends Mesh {
             }
 
             if (inWater) {
-                this.dragX = 2;
-                this.dragY = 5;
+                this.dragX = 1;
+                this.dragY = 3;
             }
             else {
                 this.dragX = this.dragX * 0.5 + 0.01 * 0.5;

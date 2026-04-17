@@ -52,6 +52,10 @@ export class TestScene {
         document.body.querySelector("#brush-reset-l")?.addEventListener("click", () => {
             this.setWidthAndHeight(60, 60);
         });
+        document.body.querySelector("#brush-reset-plumbing")?.addEventListener("click", () => {
+            this.setWidthAndHeight(40, 40);
+            this._addFillAndSinkTest();
+        });
     }
 
     public _update = () => {
@@ -164,6 +168,51 @@ export class TestScene {
                 }
             }
         }
+    }
+
+    private _addFillAndSinkTest(): void {
+
+        let i = 0;
+        let j = 0;
+        let r = 5;
+        for (let di = -r; di <= r; di++) {
+            for (let dj = -r; dj <= r; dj++) {
+                if (i + di <= 0 || i + di >= this.terrainEngine.width - 1 || j + dj <= 0 || j + dj >= this.terrainEngine.height - 1) {
+                    
+                }
+                else if (di * di + dj * dj > (r + 0.5) * (r + 0.5)) {
+                    
+                }
+                else {
+                    let cell = this.terrainEngine.getCell(i + di, j + dj);
+                    if (cell) {
+                        cell.isSolid = false;
+                    }
+                }
+            }
+        }
+
+        i = this.terrainEngine.width - 1;
+        j = this.terrainEngine.height - 1;
+        for (let di = -r; di <= r; di++) {
+            for (let dj = -r; dj <= r; dj++) {
+                if (i + di <= 0 || i + di >= this.terrainEngine.width - 1 || j + dj <= 0 || j + dj >= this.terrainEngine.height - 1) {
+                    
+                }
+                else if (di * di + dj * dj > (r + 0.5) * (r + 0.5)) {
+                    
+                }
+                else {
+                    let cell = this.terrainEngine.getCell(i + di, j + dj);
+                    if (cell) {
+                        cell.isSolid = false;
+                    }
+                }
+            }
+        }
+
+        this.terrainEngine.syncWaterAndRocks();
+        this.terrainEngine.redrawRocks();
 
         let sink = this.terrainEngine.waterEngine.getCell(2, 2);
         if (sink) {

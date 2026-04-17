@@ -105,7 +105,7 @@ export class WaterCell {
 
         let belowCell = this.waterEngine.getCell(this.i, this.j - 1);
         if (belowCell && !belowCell.isSolid) {
-            let flowRate = 100 * dt;
+            let flowRate = 150 * dt;
             if (belowCell.fillLevel < 0.001) {
                 if (this.cellTop && this.cellTop.fillLevel > this.fillLevel) {
                     //flowRate = 0;

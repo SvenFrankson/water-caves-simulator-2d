@@ -55,7 +55,7 @@ export class Duck extends Mesh {
         let dt = this.game.engine.getDeltaTime() / 1000;
         dt = Math.min(dt, 0.1);
 
-        let r = 0.5;
+        let r = 0.45;
         let i = Math.round(this.position.x / CELL_SIZE);
         let j = Math.round(this.position.y / CELL_SIZE);
         let cell = this.terrainEngine.getCell(i, j);
@@ -82,20 +82,23 @@ export class Duck extends Mesh {
                             WATER_CELL_SIZE
                         );
                         if (intersection) {
-                            let f = intersection.penetration / r;
                             if (intersection.penetration > r * 0.5) {
                                 dY = Math.max(dY, (neighbour.corners[0][1].y + neighbour.corners[1][1].y) / 2 - this.position.y);
-                                fill += neighbour.visibleFillLevel * f;
+                                fill = Math.max(fill, neighbour.visibleFillLevel);
+
+                                if (Math.abs(neighbour.flowDirection.x) > Math.abs(flowX)) {
+                                    flowX = neighbour.flowDirection.x;
+                                }
+                                if (Math.abs(neighbour.flowDirection.y) > Math.abs(flowY)) {
+                                    flowY = neighbour.flowDirection.y;
+                                }
                             }
-                            flowX += neighbour.flowDirection.x * f;
-                            flowY += neighbour.flowDirection.y * f;
                             inWater = true;
                         }
                     }
                 }
             }
 
-            fill = Math.min(fill, 1);
 
             /*
             DrawDebugLine(
@@ -113,23 +116,23 @@ export class Duck extends Mesh {
             
             
             if (dY > 0) {
-                dY = Math.min(dY, 1);
-                this.velocity.y += 60 * dY * dt;
+                dY = Math.min(dY, 0.5);
+                this.velocity.y += (0.8 * fill + 0.2) * 80 * dY * dt;
             }
 
             if (inWater) {
-                this.dragX = 1;
-                this.dragY = 3;
+                this.dragX = (0.8 * fill + 0.2) * 1;
+                this.dragY = (0.8 * fill + 0.2) * 5;
             }
             else {
                 this.dragX = this.dragX * 0.5 + 0.01 * 0.5;
-                this.dragY = this.dragY * 0.5 + 0.01 * 0.5;
+                this.dragY = this.dragY * 0.5 + 0.005 * 0.5;
             }
             
             let dragForce = new Vector3(this.velocity.x * -this.dragX, this.velocity.y * -this.dragY, 0);
             this.velocity.addInPlace(dragForce.scale(1 * dt));
             this.velocity.addInPlace(new Vector3(0, -9.81, 0).scale(1 * dt));
-            this.velocity.x += 100 * flowX * dt;
+            this.velocity.x += 50 * flowX * dt;
             this.velocity.y += 100 * flowY * dt;
 
             this.lateralVelocity = this.lateralVelocity * 0.9 + this.velocity.x * 0.1;
@@ -149,7 +152,8 @@ export class Duck extends Mesh {
                             if (dot < 0) {
                                 this.velocity.x = this.velocity.x - 2 * dot * norm.x;
                                 this.velocity.y = this.velocity.y - 2 * dot * norm.y;
-                                this.velocity.scaleInPlace(0.5);
+                                this.velocity.addInPlace(norm.scale(dot * 0.5));
+                                this.velocity.scaleInPlace(0.97);
                                 this.position.x += norm.x * overlap;
                                 this.position.y += norm.y * overlap;
                             }

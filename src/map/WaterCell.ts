@@ -92,13 +92,13 @@ export class WaterCell {
         }
 
         if (this.cellLeft && !this.cellLeft.isSolid && this.cellRight && !this.cellRight.isSolid) {
-            this.pressure = this.pressure * 0.8 + this.cellLeft.pressure * 0.1 + this.cellRight.pressure * 0.1;
+            this.pressure = this.pressure * 0.4 + this.cellLeft.pressure * 0.3 + this.cellRight.pressure * 0.3;
         }
         else if (this.cellLeft && !this.cellLeft.isSolid) {
-            this.pressure = this.pressure * 0.8 + this.cellLeft.pressure * 0.2;
+            this.pressure = this.pressure * 0.5 + this.cellLeft.pressure * 0.5;
         }
         else if (this.cellRight && !this.cellRight.isSolid) {
-            this.pressure = this.pressure * 0.8 + this.cellRight.pressure * 0.2;
+            this.pressure = this.pressure * 0.5 + this.cellRight.pressure * 0.5;
         }
 
         this.pressure = Math.max(this.pressure, 0);

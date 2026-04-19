@@ -1,6 +1,6 @@
 # water-caves-simulator-2d
 
-A Babylon.js sandbox bootstrapped with Vite and TypeScript.
+A grid-based water simulation in 2D.
 
 ## Stack
 

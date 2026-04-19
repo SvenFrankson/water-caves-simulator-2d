@@ -39,7 +39,7 @@ export class WaterCell {
     public gloup = 0;
     public step(): void {
         let dt = this.waterEngine.game.engine.getDeltaTime() / 1000;
-        dt = Math.min(dt, 0.1);
+        dt = Math.min(dt, 1 / 60);
         dt = dt / this.waterEngine.updatesPerFrame;
         this.gloup += dt;
 
@@ -105,7 +105,7 @@ export class WaterCell {
 
         let belowCell = this.waterEngine.getCell(this.i, this.j - 1);
         if (belowCell && !belowCell.isSolid) {
-            let flowRate = 150 * dt;
+            let flowRate = 60 * dt;
             if (belowCell.fillLevel < 0.001) {
                 if (this.cellTop && this.cellTop.fillLevel > this.fillLevel) {
                     //flowRate = 0;
@@ -265,6 +265,9 @@ export class WaterCell {
         if (this.fillRate > 0) {
             let randomFillRate = this.fillRate * (1 + Math.sin(this.gloup * 7) * 0.8);
             let fillAmount = Math.min(1 - this.fillLevel, randomFillRate * dt);
+            if (this.cellBottom) {
+                fillAmount = Math.min(1 - this.cellBottom.fillLevel, randomFillRate * dt);
+            }
             this.fillLevel += fillAmount;
         }
     }

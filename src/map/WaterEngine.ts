@@ -5,11 +5,10 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { WaterCell } from "./WaterCell";
 import { EaseOutCirc } from "../Easing";
-import { RockGenerator } from "./RockGenerator";
 import type { Game } from "../Game";
 import { ColorizeVertexDataInPlace, MergeVertexDatas, MirrorZVertexDataInPlace, RotateAngleAxisVertexDataInPlace, TriFlipVertexDataInPlace } from "../VertexDataUtils";
 import { CELL_SIZE, WATER_CELL_SIZE } from "./TerrainEngine";
-import { Color3, Engine, ImportMeshAsync } from "@babylonjs/core";
+import { Color3, ImportMeshAsync, Texture } from "@babylonjs/core";
 
 export class WaterEngineVertex {
 
@@ -71,6 +70,7 @@ export class WaterEngine {
     
     constructor(public width: number = 20, public height: number = 20, public game: Game) {
         this.waterMaterial = new StandardMaterial("water-material");
+        this.waterMaterial.diffuseTexture = new Texture("water.png", this.game.scene);
         this.waterMaterial.diffuseColor.set(1, 1, 1);
         this.waterMaterial.specularColor.set(0.1, 0.1, 0.1);
         this.waterMaterial.alpha = 0.9;
@@ -143,6 +143,7 @@ export class WaterEngine {
     }
 
     private _pts: Vector3[] = [Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero()];
+    private _uvs: Vector2[] = [Vector2.Zero(), Vector2.Zero(), Vector2.Zero(), Vector2.Zero()];
     private _visibilities: number[] = [0, 0, 0, 0];
     private _pressures: number[] = [0, 0, 0, 0];
 
@@ -150,7 +151,6 @@ export class WaterEngine {
         if (!this.plumbingFaucetVertexData) {
             return new Promise((resolve) => {
                 ImportMeshAsync("meshes/plumbing.gltf", this.game.scene).then(data => {
-                    console.log(data);
 
                     let sinkFrame = data.meshes.find(m => m.name === "1-sink_primitive1");
                     let sinkHole = data.meshes.find(m => m.name === "1-sink_primitive0");
@@ -318,6 +318,16 @@ export class WaterEngine {
                                     pts[7].x, pts[7].y, pts[7].z,
                                     pts[6].x, pts[6].y, pts[6].z
                                 ];
+                                vertexData.uvs = [
+                                    pts[0].x + cell.uvPos.x, pts[0].y + cell.uvPos.y,
+                                    pts[1].x + cell.uvPos.x, pts[1].y + cell.uvPos.y,
+                                    pts[2].x + cell.uvPos.x, pts[2].y + cell.uvPos.y,
+                                    pts[3].x + cell.uvPos.x, pts[3].y + cell.uvPos.y,
+                                    pts[1].x + cell.uvPos.x, pts[1].y + cell.uvPos.y,
+                                    pts[0].x + cell.uvPos.x, pts[0].y + cell.uvPos.y,
+                                    pts[3].x + cell.uvPos.x, pts[3].y + cell.uvPos.y,
+                                    pts[2].x + cell.uvPos.x, pts[2].y + cell.uvPos.y
+                                ];
                                 vertexData.indices = [
                                     0, 1, 2, 0, 2, 3,
                                     4, 5, 6, 4, 6, 7
@@ -355,6 +365,11 @@ export class WaterEngine {
                                     vertexData.positions.push(pts[6].x, pts[6].y, pts[6].z);
                                     vertexData.positions.push(pts[7].x, pts[7].y, pts[7].z);
 
+                                    vertexData.uvs.push(pts[3].x + cell.uvPos.x, pts[3].z + cell.uvPos.z);
+                                    vertexData.uvs.push(pts[2].x + cell.uvPos.x, pts[2].z + cell.uvPos.z);
+                                    vertexData.uvs.push(pts[6].x + cell.uvPos.x, pts[6].z + cell.uvPos.z);
+                                    vertexData.uvs.push(pts[7].x + cell.uvPos.x, pts[7].z + cell.uvPos.z);
+
                                     vertexData.indices.push(n, n + 1, n + 2, n, n + 2, n + 3);
 
                                     vertexData.colors.push(1 - visibilities[3] * 0.5, 1, 1, visibilities[3]);
@@ -368,6 +383,11 @@ export class WaterEngine {
                                     vertexData.positions.push(pts[5].x, pts[5].y, pts[5].z);
                                     vertexData.positions.push(pts[6].x, pts[6].y, pts[6].z);
                                     vertexData.positions.push(pts[2].x, pts[2].y, pts[2].z);
+
+                                    vertexData.uvs.push(pts[1].x + cell.uvPos.x, pts[1].z + cell.uvPos.z);
+                                    vertexData.uvs.push(pts[5].x + cell.uvPos.x, pts[5].z + cell.uvPos.z);
+                                    vertexData.uvs.push(pts[6].x + cell.uvPos.x, pts[6].z + cell.uvPos.z);
+                                    vertexData.uvs.push(pts[2].x + cell.uvPos.x, pts[2].z + cell.uvPos.z);
 
                                     vertexData.indices.push(n, n + 1, n + 2, n, n + 2, n + 3);
 
@@ -383,6 +403,11 @@ export class WaterEngine {
                                     vertexData.positions.push(pts[3].x, pts[3].y, pts[3].z);
                                     vertexData.positions.push(pts[7].x, pts[7].y, pts[7].z);
 
+                                    vertexData.uvs.push(pts[4].x + cell.uvPos.x, pts[4].z + cell.uvPos.z);
+                                    vertexData.uvs.push(pts[0].x + cell.uvPos.x, pts[0].z + cell.uvPos.z);
+                                    vertexData.uvs.push(pts[3].x + cell.uvPos.x, pts[3].z + cell.uvPos.z);
+                                    vertexData.uvs.push(pts[7].x + cell.uvPos.x, pts[7].z + cell.uvPos.z);
+
                                     vertexData.indices.push(n, n + 1, n + 2, n, n + 2, n + 3);
 
                                     vertexData.colors.push(1 - visibilities[4 - 4], 1, 1, visibilities[4 - 4]);
@@ -391,7 +416,11 @@ export class WaterEngine {
                                     vertexData.colors.push(1 - visibilities[7 - 4], 1, 1, visibilities[7 - 4]);
                                 }
 
+                                let r = cell.flowDirection.length() * 4;
                                 for (let i = 0; i < vertexData.colors.length / 4; i++) {
+                                    vertexData.colors[i * 4 + 0] = r;
+                                    vertexData.colors[i * 4 + 1] = 1;
+                                    vertexData.colors[i * 4 + 2] = 1;
                                     vertexData.colors[i * 4 + 3] = 1;
                                 }
 

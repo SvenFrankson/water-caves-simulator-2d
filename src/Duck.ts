@@ -1,13 +1,11 @@
 import { Mesh, VertexData } from "@babylonjs/core/Meshes";
 import { ImportMeshAsync } from "@babylonjs/core/Loading/sceneLoader";
-import type { WaterEngine } from "./map/WaterEngine";
 import type { Game } from "./Game";
 import { registerBuiltInLoaders } from "@babylonjs/loaders/dynamic";
 import { Color3, StandardMaterial, Vector3 } from "@babylonjs/core";
 import { ColorizeVertexDataInPlace, MirrorZVertexDataInPlace, TriFlipVertexDataInPlace } from "./VertexDataUtils";
 import { CELL_SIZE, WATER_CELL_SIZE, type TerrainEngine } from "./map/TerrainEngine";
 import { CircleSquareIntersection } from "./Math2D";
-import { DrawDebugLine } from "./Debug";
 registerBuiltInLoaders();
 
 export class Duck extends Mesh {

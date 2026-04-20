@@ -2,7 +2,6 @@ import { ImportMeshAsync } from "@babylonjs/core/Loading/sceneLoader";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import type { WaterEngine } from "./WaterEngine";
 import type { Game } from "../Game";
 import { CloneVertexData, MergeVertexDatas, MirrorZVertexDataInPlace, RotateAngleAxisVertexDataInPlace, ScaleVertexDataInPlace, TranslateVertexDataInPlace, TriFlipVertexDataInPlace } from "../VertexDataUtils";
 import { registerBuiltInLoaders } from "@babylonjs/loaders/dynamic";

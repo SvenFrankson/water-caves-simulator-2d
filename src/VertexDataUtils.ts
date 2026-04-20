@@ -1,6 +1,30 @@
-import type { Color3 } from "@babylonjs/core/Maths/math.color";
+import { StandardMaterial } from "@babylonjs/core";
+import { ImportMeshAsync } from "@babylonjs/core/Loading/sceneLoader";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
+import type { Scene } from "@babylonjs/core/scene";
+
+export async function GetGLTFVertexData(path: string, meshName: string, scene: Scene): Promise<VertexData | null> {
+    const data = await ImportMeshAsync(path, scene);
+    let mesh = data.meshes.find(m => m.name === meshName);
+
+    if (mesh instanceof Mesh) {
+        let vData = VertexData.ExtractFromMesh(mesh);
+        ColorizeVertexDataInPlace(vData, new Color3(1, 1, 1));
+        MirrorZVertexDataInPlace(vData);
+        TriFlipVertexDataInPlace(vData);
+
+        return vData;
+    }
+    
+    data.meshes.forEach(mesh => {
+        mesh.dispose(true);
+    });
+
+    return null;
+}
 
 export function CloneVertexData(data: VertexData): VertexData {
     let clonedData = new VertexData();

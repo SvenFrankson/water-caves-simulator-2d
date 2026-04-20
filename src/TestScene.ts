@@ -1,13 +1,13 @@
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { Game } from "./Game";
 import { WaterCell } from "./map/WaterCell";
-import { WaterEngine } from "./map/WaterEngine";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { MapEditInput } from "./MapEditInput";
 import { Duck } from "./Duck";
 import { CELL_SIZE, TerrainEngine, WATER_CELLS_PER_TERRAIN_CELL } from "./map/TerrainEngine";
 import { TerrainCell } from "./map/TerrainCell";
+import { Door } from "./map/Door";
 
 export class TestScene {
 
@@ -16,7 +16,7 @@ export class TestScene {
 
     constructor(public game: Game, size: number = 40) {
 
-        const light = new HemisphericLight("light", new Vector3(0, 1, 0), game.scene);
+        const light = new HemisphericLight("light", new Vector3(1, 3, -2), game.scene);
         light.intensity = 1;
         light.groundColor = new Color3(0.1, 0.1, 0.1);
 
@@ -67,8 +67,7 @@ export class TestScene {
     public setWidthAndHeight(width: number, height: number) {
         this.terrainEngine.setWidthAndHeight(width, height);
 
-        this.terrainEngine.cells = [];
-        this.terrainEngine.waterEngine.cells = [];
+        this.terrainEngine.clear();
         if (false) {
             this._generateTest1();
         }
@@ -226,5 +225,8 @@ export class TestScene {
             fill.fillRate = 5;
         }
         this.terrainEngine.waterEngine.redrawDebugWaterCellsMesh();
+
+        let door = new Door(8, 8, this.terrainEngine, this.game);
+        door.close();
     }
 }

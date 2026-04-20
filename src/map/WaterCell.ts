@@ -1,4 +1,4 @@
-import { Vector2 } from "@babylonjs/core/Maths/math.vector";
+import { Vector2, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { WaterEngine } from "./WaterEngine";
 import { WATER_CELL_SIZE } from "./TerrainEngine";
 
@@ -12,6 +12,7 @@ export class WaterCell {
     public flowDirection: Vector2 = Vector2.Zero();
     public emptyAnchor: Vector2 = Vector2.Zero();
     public corners: Vector2[][] = [[Vector2.Zero(), Vector2.Zero()], [Vector2.Zero(), Vector2.Zero()]];
+    public uvPos: Vector3 = Vector3.Zero();
     public drawn: boolean = false;
     
     public fillRate: number = 0;
@@ -256,6 +257,24 @@ export class WaterCell {
         if (this.flowDirection.length() > 1) {
             this.flowDirection.normalize();
         }
+        this.uvPos.x -= this.flowDirection.x * 0.05;
+        while (this.uvPos.x < - 0.5) {
+            this.uvPos.x += 1;
+        }
+        while (this.uvPos.x > 0.5) {
+            this.uvPos.x -= 1;
+        }
+        this.uvPos.y -= this.flowDirection.y * 0.05;
+        while (this.uvPos.y < - 0.5) {
+            this.uvPos.y += 1;
+        }
+        while (this.uvPos.y > 0.5) {
+            this.uvPos.y -= 1;
+        }
+
+        if (this.flowDirection.length() < 0.01) {
+            this.uvPos.scaleInPlace(1 - dt);
+        }
 
         if (this.sinkRate > 0) {
             let sinkRateRate = this.sinkRate * (1 + Math.sin(this.gloup * 7) * 0.8);
@@ -265,9 +284,6 @@ export class WaterCell {
         if (this.fillRate > 0) {
             let randomFillRate = this.fillRate * (1 + Math.sin(this.gloup * 7) * 0.8);
             let fillAmount = Math.min(1 - this.fillLevel, randomFillRate * dt);
-            if (this.cellBottom) {
-                fillAmount = Math.min(1 - this.cellBottom.fillLevel, randomFillRate * dt);
-            }
             this.fillLevel += fillAmount;
         }
     }

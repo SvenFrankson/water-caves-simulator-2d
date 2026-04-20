@@ -1,9 +1,9 @@
 import { Matrix } from "@babylonjs/core/Maths/math.vector";
 import type { Game } from "./Game";
-import type { WaterEngine } from "./map/WaterEngine";
 import { CELL_SIZE, WATER_CELL_SIZE, type TerrainEngine } from "./map/TerrainEngine";
 import { Mesh, Vector3 } from "@babylonjs/core";
 import { Duck } from "./Duck";
+import { Door } from "./map/Door";
 
 enum MapEditBrush {
     None,
@@ -137,14 +137,23 @@ export class MapEditInput {
         this.pointerIsDown = true;
         let ray = this.game.scene.createPickingRay(this.game.scene.pointerX, this.game.scene.pointerY, Matrix.Identity(), this.game.camera);
         let pickResult = this.game.scene.pickWithRay(ray, (mesh) => {
-            return mesh && mesh.parent instanceof Duck;
+            return mesh && mesh.parent instanceof Duck || mesh instanceof Door;
         });
 
-        if (pickResult && pickResult.hit && pickResult.pickedMesh?.parent instanceof Mesh) {
+        if (pickResult && pickResult.hit && pickResult.pickedMesh?.parent instanceof Duck) {
             this.draggedObject = pickResult.pickedMesh.parent;
             let pickedPoint = pickResult.pickedPoint!;
             this.dragOffset.copyFrom(pickedPoint).subtractInPlace(this.draggedObject.position);
             this.game.camera.detachControl();
+        }
+        
+        if (pickResult && pickResult.hit && pickResult.pickedMesh instanceof Door) {
+            if (pickResult.pickedMesh.closed) {
+                pickResult.pickedMesh.open();
+            }
+            else {
+                pickResult.pickedMesh.close();
+            }
         }
 
         if (this.brush !== MapEditBrush.None) {

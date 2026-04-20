@@ -1,11 +1,12 @@
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import type { WaterCell } from "./WaterCell";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { Game } from "../Game";
 import { MeshBuilder } from "@babylonjs/core";
 import { WaterEngine } from "./WaterEngine";
 import { RockGenerator } from "./RockGenerator";
 import type { TerrainCell } from "./TerrainCell";
+import type { Door } from "./Door";
+import type { MapObject } from "./MapObject";
 
 export var CELL_SIZE = 1;
 export var WATER_CELL_SIZE_RATIO = 1;
@@ -26,6 +27,8 @@ export class TerrainEngine {
 
     public rockGenerator: RockGenerator;
     public waterEngine: WaterEngine;
+
+    public objects: MapObject[] = [];
 
     constructor(public width: number = 20, public height: number = 20, public game: Game) {
         this.rockMaterial = new StandardMaterial("solid-material");
@@ -80,6 +83,27 @@ export class TerrainEngine {
         return undefined;
     }
 
+    public addObject(object: MapObject) {
+        if (this.objects.indexOf(object) === -1) {
+            this.objects.push(object);
+        }
+    }
+
+    public removeObject(object: MapObject) {
+        let index = this.objects.indexOf(object);
+        if (index !== -1) {
+            this.objects.splice(index, 1);
+        }
+    }
+
+    public clear(): void {
+        while (this.objects.length > 0) {
+            this.objects[0].dispose();
+        }
+        this.cells = [];
+        this.waterEngine.cells = [];
+    }
+
     public setWaterCellFillLevel(i: number, j: number, fillLevel: number): void {
         for (let ii = 0; ii < WATER_CELLS_PER_TERRAIN_CELL; ii++) {
             for (let jj = 0; jj < WATER_CELLS_PER_TERRAIN_CELL; jj++) {
@@ -127,6 +151,8 @@ export class TerrainEngine {
                 }
             }
         }
+
+        this.objects.forEach(object => object.updateWaterCells());
     }
 
     public update(): void {
